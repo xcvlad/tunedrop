@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>⬇ Descargar para Windows y Linux</b></a> ·
+  <a href="#instalar"><b>⬇ Instalar en Windows y Linux</b></a> ·
   <a href="docs/como-funciona.md">Cómo funciona</a> ·
   <a href="#para-programadores">Para programadores</a>
 </p>
@@ -33,51 +33,44 @@
   - Títulos limpios, sin «(Official Video)».
 - 🎚 **Calidad a elegir**: MP3 V0 (recomendado), MP3 320 kbps o M4A original sin pérdidas extra.
 
-## Instalar con un solo comando
+## Instalar
 
-No necesitas Python ni nada más: el comando descarga la última versión desde [Releases](../../releases/latest) y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Para actualizar, vuelve a ejecutarlo.
-
-**Windows**: abre **PowerShell** (menú Inicio → escribe «PowerShell») y pega:
-
-```powershell
-irm https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/windows.ps1 | iex
-```
-
-tunedrop aparece en el menú Inicio y en el escritorio. Se desinstala desde *Configuración → Aplicaciones*.
-
-**Linux**: abre una terminal y pega:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash
-```
-
-tunedrop aparece en el menú de aplicaciones, y también se abre escribiendo `tunedrop`. Para desinstalarlo, añade `-s -- --desinstalar` al final: `... | bash -s -- --desinstalar`.
-
-> Pegar en la terminal un comando de internet es cómodo, pero solo debes hacerlo si confías en quien lo publica. Puedes leer antes lo que hace cada script: [`instalar/windows.ps1`](instalar/windows.ps1) y [`instalar/linux.sh`](instalar/linux.sh).
-
-## Instalar a mano (descargando el archivo)
+Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Para actualizar, vuelve a ejecutarlo.
 
 ### Windows
 
-1. Ve a **[Releases](../../releases/latest)** y descarga uno de los dos:
-   - `tunedrop-X.Y.Z-setup.exe`: **instalador**. Lo instala como cualquier programa, sin pedir permisos de administrador.
-   - `tunedrop-X.Y.Z-portable.zip`: **portable**. Se descomprime y se abre `tunedrop.exe`; no instala nada.
-2. Ábrelo, busca una canción y pulsa **+**.
-3. Pulsa **Descargar**. La música aparece en tu carpeta `Música\tunedrop`.
+1. Abre **PowerShell**: pulsa el menú Inicio, escribe `PowerShell` y pulsa Intro.
+2. Copia esta línea, pégala en la ventana azul y pulsa Intro:
+   ```powershell
+   irm https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/windows.ps1 | iex
+   ```
+3. Espera a que diga **Listo**. tunedrop aparece en el menú Inicio y en el escritorio.
 
-> ⚠ **Windows puede mostrar «Windows protegió su PC»** la primera vez. Pasa con cualquier programa nuevo que no ha pagado un certificado de firma, no porque tenga nada raro. Pulsa **Más información → Ejecutar de todas formas**. Si prefieres no fiarte, puedes [comprobar el archivo](docs/como-se-fabrica.md#comprobar-una-descarga) o [ejecutarlo desde el código](#para-programadores).
+Para desinstalarlo: *Configuración → Aplicaciones → tunedrop → Desinstalar*.
 
 ### Linux
 
-1. Ve a **[Releases](../../releases/latest)** y descarga `tunedrop-X.Y.Z-linux-x86_64.tar.gz`.
-2. Descomprímelo y abre la app desde una terminal:
+1. Abre una terminal.
+2. Copia esta línea, pégala y pulsa Intro:
    ```bash
-   tar -xzf tunedrop-*-linux-x86_64.tar.gz
-   ./tunedrop/tunedrop
+   curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash
    ```
-3. La música aparece en tu carpeta de música (`~/Música/tunedrop` o `~/Music/tunedrop`).
+3. Espera a que diga **Listo**. tunedrop aparece en el menú de aplicaciones, y también se abre escribiendo `tunedrop`.
 
-> Si la ventana no se abre y ves un error sobre `xcb`, instala la librería que Qt necesita: `sudo apt install libxcb-cursor0` (Ubuntu/Debian), `sudo dnf install xcb-util-cursor` (Fedora) o `sudo pacman -S xcb-util-cursor` (Arch).
+Para desinstalarlo:
+```bash
+curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash -s -- --desinstalar
+```
+
+> Si la ventana no se abre y ves un error sobre `xcb`, instala la librería que Qt necesita: `sudo apt install libxcb-cursor0` (Ubuntu/Debian), `sudo dnf install xcb-util-cursor` (Fedora) o `sudo pacman -S xcb-util-cursor` (Arch). El instalador ya te avisa si te falta.
+
+### Cómo se usa
+
+1. Abre tunedrop, escribe el nombre de una canción y pulsa **Buscar**.
+2. Pulsa **+** en las que quieras.
+3. Pulsa **Descargar**. Las canciones aparecen en tu carpeta de música, dentro de `tunedrop`, con el nombre `Artista - Título.mp3`.
+
+> Pegar en la terminal un comando de internet es cómodo, pero solo debes hacerlo si confías en quien lo publica. Puedes leer antes lo que hace cada script: [`instalar/windows.ps1`](instalar/windows.ps1) y [`instalar/linux.sh`](instalar/linux.sh). Y si quieres comprobar que el programa descargado es legítimo, mira [¿Es fiable?](#es-fiable).
 
 ## Para programadores
 
