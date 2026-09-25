@@ -36,8 +36,10 @@ En Linux no hay instalador tipo `setup.exe`: se descomprime y se ejecuta `./tune
 3. **PyInstaller** reúne en `dist/tunedrop/` un Python propio, todas las librerías, nuestro código, ffmpeg, Deno y las licencias. Usamos el modo `--onedir` (una carpeta) en lugar de un único ejecutable gigante, porque:
    - arranca mucho más rápido;
    - los antivirus lo marcan menos por error.
+
+   También añade una **pantalla de carga** (`--splash`): la imagen [`pantalla-carga.png`](../packaging/pantalla-carga.png), que el programa enseña nada más hacer clic. Abrir tunedrop tarda unos segundos, porque hay que cargar Python y Qt y el antivirus revisa los archivos, y sin ella parecería que no hace caso. La muestra el propio lanzador, antes de que arranque Python, con una pequeña herramienta de dibujo (Tcl/Tk, unos 5 MB), y la app la cierra cuando aparece la ventana.
 4. **Comprime** la carpeta: `.zip` portable en Windows, `.tar.gz` en Linux.
-5. **Solo en Windows: Inno Setup** lee la receta [`packaging/instalador.iss`](../packaging/instalador.iss) y crea el `setup.exe`. Se instala en `%LOCALAPPDATA%\Programs\tunedrop`, sin pedir permisos de administrador. Su ventana sigue el modo claro u oscuro de Windows y usa dos imágenes propias (`packaging/instalador-*.png`), dibujadas con [`crear_imagenes_instalador.py`](../packaging/crear_imagenes_instalador.py). Necesita Inno Setup 6.6 o superior.
+5. **Solo en Windows: Inno Setup** lee la receta [`packaging/instalador.iss`](../packaging/instalador.iss) y crea el `setup.exe`. Se instala en `%LOCALAPPDATA%\Programs\tunedrop`, sin pedir permisos de administrador. Su ventana sigue el modo claro u oscuro de Windows y usa dos imágenes propias (`packaging/instalador-*.png`), dibujadas con [`crear_imagenes.py`](../packaging/crear_imagenes.py). Necesita Inno Setup 6.6 o superior.
 6. **Calcula las huellas SHA-256** y las guarda en `SHA256SUMS.txt`.
 
 Para comprobar que el programa resultante funciona sin abrir la ventana:

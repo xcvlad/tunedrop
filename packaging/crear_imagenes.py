@@ -1,17 +1,21 @@
-"""Dibuja las dos imágenes del instalador de Windows (Inno Setup).
+"""Dibuja las imágenes del instalador de Windows y la pantalla de carga.
 
 - instalador-lateral.png: la franja de la izquierda de las pantallas de
   bienvenida y final. Degradado del icono, la nota musical, el nombre y unas
   barras de ecualizador de adorno.
 - instalador-icono.png: el cuadradito de arriba a la derecha del resto de
   pantallas (el icono de la app con fondo transparente).
+- pantalla-carga.png: el recuadro «Abriendo tunedrop…» que sale nada más hacer
+  clic en el programa, antes incluso de que arranque Python (opción --splash de
+  PyInstaller, ver build.py). Sin esquinas redondeadas: en Linux no se pueden
+  hacer transparentes.
 
 Las imágenes ya están creadas en packaging/: este script solo hace falta si
-quieres cambiar el diseño. Uso:  python packaging/crear_imagenes_instalador.py
+quieres cambiar el diseño. Uso:  python packaging/crear_imagenes.py
 
-Se dibujan al tamaño que Inno Setup usa con el zoom de pantalla al 250 %
-(534x1022 y 159x159). En pantallas normales las reduce él solo, así que se
-ven nítidas en cualquier monitor.
+Las del instalador se dibujan al tamaño que Inno Setup usa con el zoom de
+pantalla al 250 % (534x1022 y 159x159). En pantallas normales las reduce él
+solo, así que se ven nítidas en cualquier monitor.
 """
 
 from __future__ import annotations
@@ -116,7 +120,30 @@ def imagen_icono() -> Image.Image:
     return Image.open(ICONO).convert("RGBA").resize((159, 159), Image.LANCZOS)
 
 
+def imagen_carga() -> Image.Image:
+    """Recuadro oscuro con el icono, el nombre y «Abriendo tunedrop…» (como la app)."""
+    ancho, alto = 420, 140
+    w, h = ancho * ESCALA, alto * ESCALA
+    fondo, borde, texto, apagado = (21, 24, 31), (42, 48, 60), (236, 238, 243), (143, 152, 168)
+    lienzo = Image.new("RGB", (w, h), fondo)
+    d = ImageDraw.Draw(lienzo)
+    d.rectangle([0, 0, w - 1, h - 1], outline=borde, width=ESCALA)
+
+    icono = Image.open(ICONO).convert("RGBA").resize((72 * ESCALA, 72 * ESCALA), Image.LANCZOS)
+    lienzo.paste(icono, (30 * ESCALA, 30 * ESCALA), icono)
+    d.text((122 * ESCALA, 58 * ESCALA), "tunedrop", font=fuente("segoeuib.ttf", 28 * ESCALA),
+           fill=texto, anchor="ls")
+    d.text((123 * ESCALA, 88 * ESCALA), "Abriendo tunedrop…", font=fuente("segoeui.ttf", 16 * ESCALA),
+           fill=apagado, anchor="ls")
+
+    # Línea de abajo con el degradado del icono.
+    barra = degradado(w, 4 * ESCALA).convert("RGB")
+    lienzo.paste(barra, (0, h - 4 * ESCALA))
+    return lienzo.resize((ancho, alto), Image.LANCZOS)
+
+
 if __name__ == "__main__":
     imagen_lateral().save(PACKAGING / "instalador-lateral.png", optimize=True)
     imagen_icono().save(PACKAGING / "instalador-icono.png", optimize=True)
-    print("Creadas packaging/instalador-lateral.png y packaging/instalador-icono.png")
+    imagen_carga().save(PACKAGING / "pantalla-carga.png", optimize=True)
+    print("Creadas packaging/instalador-lateral.png, instalador-icono.png y pantalla-carga.png")

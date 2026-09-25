@@ -54,7 +54,8 @@ tunedrop/
 │   ├── lanzador.py           ←   Arranque del .exe
 │   ├── instalador.iss        ←   Receta del instalador (Inno Setup)
 │   ├── instalador-*.png      ←   Imágenes de la ventana del instalador
-│   ├── crear_imagenes_instalador.py ← Dibuja esas imágenes (solo para cambiar el diseño)
+│   ├── pantalla-carga.png    ←   Lo primero que sale al abrir el programa («Abriendo tunedrop…»)
+│   ├── crear_imagenes.py     ←   Dibuja esas imágenes (solo para cambiar el diseño)
 │   ├── descargar_ffmpeg.py   ←   Descarga ffmpeg en bin/
 │   └── icono.ico             ←   Icono del .exe
 │

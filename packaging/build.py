@@ -67,6 +67,9 @@ def pyinstaller() -> Path:
         "--windowed",                     # sin ventana negra de consola (en Linux no cambia nada)
         "--onedir",                       # carpeta con el .exe: arranca rápido y da menos falsos positivos de antivirus
         "--icon", str(PACKAGING / "icono.ico"),  # Linux lo ignora: allí el icono lo pone el .desktop
+        # Pantalla de carga: el lanzador la muestra nada más hacer clic, antes de
+        # cargar Python (lo que más tarda). La cierra tunedrop/__main__.py.
+        "--splash", str(PACKAGING / "pantalla-carga.png"),
         "--add-data", f"{RAIZ / 'tunedrop' / 'assets'}{sep}tunedrop/assets",
         "--add-binary", f"{BIN / f'ffmpeg{EXT}'}{sep}bin",
         "--add-binary", f"{BIN / f'deno{EXT}'}{sep}bin",

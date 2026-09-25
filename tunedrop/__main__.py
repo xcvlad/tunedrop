@@ -7,9 +7,27 @@ from pathlib import Path
 
 ICONO = Path(__file__).resolve().parent / "assets" / "icono.png"
 
+# En el programa compilado, el lanzador enseña una pantalla de carga nada más
+# hacer clic (opción --splash de PyInstaller, ver packaging/build.py). Se
+# controla con el módulo pyi_splash, que solo existe allí: desde el código o
+# con Nix no hay, y se usa la pantalla de carga de Qt (ui/startup.py).
+try:
+    import pyi_splash
+except Exception:
+    pyi_splash = None
+
+
+def cerrar_pantalla_del_lanzador() -> None:
+    if pyi_splash is not None:
+        try:
+            pyi_splash.close()
+        except Exception:
+            pass
+
 
 def main() -> int:
     if "--comprobar" in sys.argv:
+        cerrar_pantalla_del_lanzador()
         from .comprobar import ejecutar
 
         i = sys.argv.index("--comprobar")
@@ -32,13 +50,17 @@ def main() -> int:
     # ¿Ya hay una tunedrop abierta? Entonces se pone delante y esta se cierra.
     instancia = startup.SingleInstance()
     if instancia.notify_running():
+        cerrar_pantalla_del_lanzador()
         return 0
     instancia.listen()
 
-    # Pantalla de carga mientras se prepara la ventana principal.
-    splash = startup.splash_screen(str(ICONO))
-    splash.show()
-    app.processEvents()   # la dibuja ya, sin esperar a que termine lo de abajo
+    # Pantalla de carga mientras se prepara la ventana principal (si el
+    # lanzador no ha puesto ya la suya).
+    splash = None
+    if pyi_splash is None:
+        splash = startup.splash_screen(str(ICONO))
+        splash.show()
+        app.processEvents()   # la dibuja ya, sin esperar a que termine lo de abajo
 
     from .ui.main_window import MainWindow
 
@@ -51,7 +73,9 @@ def main() -> int:
     app.setWindowIcon(QIcon(str(ICONO)))
     window = MainWindow()
     window.show()
-    splash.finish(window)
+    if splash is not None:
+        splash.finish(window)
+    cerrar_pantalla_del_lanzador()
     instancia.window = window
     startup.preload_in_background()
     return app.exec()

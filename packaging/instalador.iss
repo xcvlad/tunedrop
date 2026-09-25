@@ -41,7 +41,7 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ; «modern» es el diseño actual de Inno Setup, y «dynamic» hace que el
 ; instalador salga en modo claro u oscuro según lo tengas en Windows.
 WizardStyle=modern dynamic
-; Las imágenes las dibuja packaging\crear_imagenes_instalador.py.
+; Las imágenes las dibuja packaging\crear_imagenes.py.
 ; Lateral: franja de la izquierda en la bienvenida y al terminar.
 WizardImageFile=instalador-lateral.png
 ; Icono: esquina de arriba a la derecha en el resto de pantallas (fondo
