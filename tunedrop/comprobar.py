@@ -52,7 +52,7 @@ def ejecutar(args: list[str]) -> int:
             log(f"Descargando: {track.title}")
             with tempfile.TemporaryDirectory() as tmp:
                 result = download_track(
-                    track, DownloadOptions(Path(tmp), AudioFormat.MP3_V0, "Artista - Título"),
+                    track, DownloadOptions(Path(tmp), AudioFormat.MP3_V0),
                     lambda *_: None)
                 size = result.path.stat().st_size
                 log(f"OK: {result.path.name} ({size / 1e6:.1f} MB, origen {result.source_codec} "
