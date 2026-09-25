@@ -1,0 +1,113 @@
+# ============================================================
+#  Compilación pública y automática de tunedrop para Windows y Linux.
+#
+#  Cuándo se ejecuta: al subir una etiqueta de versión, por ejemplo:
+#      git tag v0.1.0
+#      git push origin v0.1.0
+#  (o a mano desde la pestaña "Actions" de GitHub -> "Run workflow").
+#
+#  Cómo funciona: el trabajo "compilar" se ejecuta dos veces a la vez, una
+#  en un servidor Windows y otra en uno Linux (cada sistema compila su propia
+#  versión). Después, "publicar" junta todo en una sola Release.
+#
+#  Por qué es fiable: el programa lo compila un servidor de GitHub a partir
+#  del código público del repositorio. Cualquiera puede leer este archivo,
+#  ver el registro completo de la compilación en la pestaña Actions y
+#  comprobar que lo que descarga sale exactamente de este código
+#  (huellas SHA-256 + certificado de procedencia "attestation").
+# ============================================================
+name: Compilar y publicar
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write       # para crear la Release y subir los archivos
+  id-token: write       # para firmar el certificado de procedencia
+  attestations: write
+
+jobs:
+  compilar:
+    strategy:
+      matrix:
+        # Linux se compila en Ubuntu 22.04 (y no en la última) para que el
+        # programa funcione también en distribuciones algo más antiguas.
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v5
+
+      - name: Instalar Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Instalar librerías del sistema que necesita Qt (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxcb-cursor0
+
+      - name: Instalar dependencias
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Ejecutar los tests
+        run: python -m pytest -q
+
+      - name: Instalar Inno Setup (crea el instalador de Windows)
+        if: runner.os == 'Windows'
+        run: choco install innosetup -y --no-progress
+
+      - name: Compilar (packaging/build.py, el mismo script que puedes ejecutar en tu PC)
+        run: python packaging/build.py
+
+      - name: Comprobar que el programa funciona (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $p = Start-Process dist\tunedrop\tunedrop.exe -ArgumentList "--comprobar" -Wait -PassThru
+          Get-Content tunedrop-comprobacion.txt
+          if ($p.ExitCode -ne 0) { exit 1 }
+
+      - name: Comprobar que el programa funciona (Linux)
+        if: runner.os == 'Linux'
+        run: dist/tunedrop/tunedrop --comprobar
+
+      - name: Certificado de procedencia (demuestra que sale de este código)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/tunedrop-*
+
+      - name: Guardar los archivos compilados
+        shell: bash
+        run: mv dist/SHA256SUMS.txt "dist/SHA256SUMS-${{ runner.os }}.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tunedrop-${{ runner.os }}
+          path: |
+            dist/tunedrop-*
+            dist/SHA256SUMS-*.txt
+
+  publicar:
+    needs: compilar
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recoger lo compilado en Windows y en Linux
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Unir las huellas SHA-256 en un solo archivo
+        run: cat dist/SHA256SUMS-*.txt > dist/SHA256SUMS.txt
+
+      - name: Publicar la Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/tunedrop-*
+            dist/SHA256SUMS.txt

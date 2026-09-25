@@ -1,0 +1,24 @@
+# Ejecuta los tests automáticamente cada vez que se sube código a GitHub,
+# en Windows y en Linux, para asegurar que la app funciona en los dos.
+# El resultado aparece como ✔ o ✘ junto a cada commit.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false        # si falla en un sistema, sigue probando el otro
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pytest -q
