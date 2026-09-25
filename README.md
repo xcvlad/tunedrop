@@ -54,7 +54,7 @@ Algunos Windows 11 tienen activado **Control inteligente de aplicaciones** (*Sma
 
 - No es un virus ni un fallo de tu ordenador.
 - Windows no tiene un botón de «ejecutar de todas formas» para un programa concreto. La única forma de instalarlo es apagar esa protección, y mientras esté apagada tu ordenador queda algo menos protegido frente a programas desconocidos.
-- Esa protección revisa los programas cada vez que se abren, no solo al instalarlos: mientras esté encendida, tunedrop tampoco se abrirá. Para usarlo tiene que quedarse apagada. Si más adelante cambias de idea, en las versiones actuales de Windows 11 se puede volver a encender sin reinstalar nada ([más información de Microsoft](https://support.microsoft.com/es-es/topic/qu%C3%A9-es-el-control-inteligente-de-aplicaciones-285ea03d-fa88-4d56-882e-6698afdb7003)).
+- Si la apagas para instalarlo, en las versiones actuales de Windows 11 puedes volver a encenderla después sin reinstalar nada ([más información de Microsoft](https://support.microsoft.com/es-es/topic/qu%C3%A9-es-el-control-inteligente-de-aplicaciones-285ea03d-fa88-4d56-882e-6698afdb7003)). Ten en cuenta que esa protección también revisa los programas al abrirlos: con ella encendida, puede que tunedrop a veces no se abra. Si te pasa, tendrás que dejarla apagada para usarlo.
 - Más adelante quiero firmar el programa. Cuando lo esté, funcionará también en esos ordenadores sin tocar nada.
 
 Puedes ver si lo tienes activado en *Seguridad de Windows → Control de aplicaciones y navegador → Control inteligente de aplicaciones*.
