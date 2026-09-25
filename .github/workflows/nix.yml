@@ -1,0 +1,48 @@
+# Comprueba que tunedrop se puede instalar y abrir en NixOS (con flake.nix).
+#
+# Se ejecuta al subir código y, además, cada lunes: nixpkgs (el catálogo de
+# NixOS) cambia aunque tunedrop no cambie, y así nos enteramos si algo se rompe.
+name: NixOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"     # los lunes a las 6:00 (hora UTC)
+  workflow_dispatch:
+
+jobs:
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar Nix (con los flakes activados)
+        uses: cachix/install-nix-action@v31
+
+      - name: Construir el paquete (Nix también pasa los tests)
+        run: nix build -L
+
+      - name: Autodiagnóstico (ffmpeg, Deno y yt-dlp)
+        run: ./result/bin/tunedrop --comprobar
+
+      - name: Comprobar que la ventana se abre
+        run: |
+          # No hay pantalla, así que Qt dibuja la ventana en memoria («offscreen»).
+          # Si a los 15 segundos sigue abierta, es que ha arrancado bien:
+          # «timeout» la cierra y devuelve el código 124.
+          codigo=0
+          QT_QPA_PLATFORM=offscreen timeout 15 ./result/bin/tunedrop || codigo=$?
+          if [ "$codigo" -ne 124 ]; then
+            echo "La ventana se cerró sola (código $codigo)"
+            exit 1
+          fi
+
+      - name: El comando que usan las personas (nix run github:...)
+        if: github.event_name != 'pull_request'    # en un PR, ese commit aún no está en el repo
+        run: nix run "github:${{ github.repository }}/${{ github.sha }}" -- --comprobar
+
+      - name: El entorno para programar (nix develop)
+        run: nix develop -c python -m pytest -q

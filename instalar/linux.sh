@@ -11,6 +11,8 @@
 #  3. Lo guarda en ~/.local/share/tunedrop, solo para tu usuario (sin sudo).
 #  4. Lo añade al menú de aplicaciones y crea el comando «tunedrop».
 #
+#  En NixOS no instala nada: explica cómo hacerlo con Nix (flake.nix).
+#
 #  Volver a ejecutarlo actualiza a la última versión.
 #  Para desinstalar:
 #      curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash -s -- --desinstalar
@@ -227,6 +229,23 @@ fi
 # ============================================================
 #  Instalar
 # ============================================================
+
+# --- NixOS -------------------------------------------------------
+# NixOS guarda las librerías en otro sitio y el programa compilado no funciona
+# allí. En NixOS, tunedrop se instala con Nix (ver flake.nix en el repositorio).
+if [ -e /etc/NIXOS ] || grep -qs '^ID=nixos' /etc/os-release; then
+    caja "$VIOLETA" \
+        "$NOTA  Estás en NixOS: allí tunedrop se instala con Nix." \
+        "" \
+        "   Para instalarlo para siempre, mira la guía:" \
+        "   https://github.com/$REPO#nixos"
+    echo
+    # El comando va fuera del recuadro para poder copiarlo sin los bordes.
+    echo "  Para probarlo sin instalar nada, copia esta línea:"
+    echo
+    printf '    %s%s%s\n\n' "$NEGRITA" "nix --extra-experimental-features 'nix-command flakes' run github:$REPO" "$NORMAL"
+    exit 0
+fi
 
 # --- Comprobaciones --------------------------------------------
 command -v curl >/dev/null || fallo "Hace falta curl." "Instálalo con: sudo apt install curl (o el gestor de tu distribución)."
