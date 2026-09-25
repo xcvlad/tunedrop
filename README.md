@@ -53,8 +53,8 @@ Para desinstalarlo: *Configuración → Aplicaciones → tunedrop → Desinstala
 Algunos Windows 11 tienen activado **Control inteligente de aplicaciones** (*Smart App Control*). Es una protección que solo deja ejecutar programas con **firma digital** (un certificado que identifica al autor) o que ya usan millones de personas. tunedrop es nuevo y **todavía no está firmado**, así que en esos ordenadores Windows no deja instalarlo. El instalador lo detecta y te avisa antes de descargar nada.
 
 - No es un virus ni un fallo de tu ordenador.
-- **No te recomendamos apagar esa protección**: Windows no deja volver a encenderla sin reinstalar el sistema.
-- Estamos trabajando para firmar el programa. Cuando lo esté, funcionará también en esos ordenadores.
+- Windows no tiene un botón de «ejecutar de todas formas» para un programa concreto. La única forma de instalarlo es apagar esa protección, y así tu ordenador queda algo menos protegido frente a programas desconocidos. Si decides hacerlo, según [Microsoft](https://support.microsoft.com/es-es/topic/qu%C3%A9-es-el-control-inteligente-de-aplicaciones-285ea03d-fa88-4d56-882e-6698afdb7003) las versiones recientes de Windows permiten volver a encenderla después.
+- Estoy trabajando para firmar el programa. Cuando lo esté, funcionará también en esos ordenadores sin tocar nada.
 
 Puedes ver si lo tienes activado en *Seguridad de Windows → Control de aplicaciones y navegador → Control inteligente de aplicaciones*.
 
