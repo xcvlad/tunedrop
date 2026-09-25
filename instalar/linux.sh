@@ -46,7 +46,7 @@ echo
 command -v curl >/dev/null || fallo "Hace falta curl. Instálalo con: sudo apt install curl (o el gestor de tu distribución)."
 command -v tar  >/dev/null || fallo "Hace falta tar."
 [ "$(uname -m)" = "x86_64" ] || fallo "De momento solo hay versión para PC de 64 bits (x86_64). Tu equipo es $(uname -m).
-     Puedes ejecutarlo desde el código: https://github.com/$REPO#ejecutar-desde-el-código-tres-pasos"
+     Puedes ejecutarlo desde el código: https://github.com/$REPO#para-programadores"
 
 # --- 1. Buscar la última versión --------------------------------
 # La API de GitHub devuelve un JSON con los archivos de la última Release.

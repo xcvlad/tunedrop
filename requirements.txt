@@ -1,5 +1,5 @@
 # Librerías que necesita tunedrop para funcionar.
-# Se instalan con:  pip install -r requirements.txt   (o con desde-el-codigo/1_instalar.bat)
+# Se instalan con:  pip install -r requirements.txt
 
 yt-dlp[default]>=2026.8.19   # habla con YouTube y otras webs para sacar el audio
 deno>=2.0                    # motor JavaScript que yt-dlp necesita para YouTube

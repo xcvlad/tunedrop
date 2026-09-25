@@ -12,7 +12,7 @@
 <p align="center">
   <a href="../../releases/latest"><b>⬇ Descargar para Windows y Linux</b></a> ·
   <a href="docs/1-como-esta-organizado.md">Cómo funciona</a> ·
-  <a href="docs/2-ejecutar-desde-el-codigo.md">Ejecutar desde el código</a>
+  <a href="#para-programadores">Para programadores</a>
 </p>
 
 ![Captura de tunedrop](docs/img/captura.png)
@@ -79,17 +79,33 @@ tunedrop aparece en el menú de aplicaciones, y también se abre escribiendo `tu
 
 > Si la ventana no se abre y ves un error sobre `xcb`, instala la librería que Qt necesita: `sudo apt install libxcb-cursor0` (Ubuntu/Debian), `sudo dnf install xcb-util-cursor` (Fedora) o `sudo pacman -S xcb-util-cursor` (Arch).
 
-## Ejecutar desde el código (tres pasos)
+## Para programadores
 
-Si tienes [Python](https://www.python.org/downloads/) 3.10 o superior instalado, usa los scripts de la carpeta **`desde-el-codigo/`**:
+Si quieres ver o cambiar el código y abrir la app sin instalarla, necesitas [Python](https://www.python.org/downloads/) 3.10 o superior. Dentro de la carpeta del proyecto:
 
-| Windows (doble clic) | Linux (`bash <archivo>` en la terminal) | Qué hace |
-|---|---|---|
-| `1_instalar.bat` | `1_instalar.sh` | Prepara todo, **solo la primera vez**. En Linux también añade tunedrop al menú de aplicaciones. |
-| `2_abrir_tunedrop.bat` | `2_abrir_tunedrop.sh` | Abre la app. |
-| `3_crear_exe.bat` | `3_crear_app.sh` | *(Opcional)* Crea tu propio programa para distribuir en `dist/`. |
+**Windows**
+```
+python -m venv .venv
+.venv\Scripts\pip install -r requirements-dev.txt
+.venv\Scripts\python packaging\descargar_ffmpeg.py
+.venv\Scripts\python -m tunedrop
+```
 
-La explicación paso a paso está en **[Ejecutar desde el código](docs/2-ejecutar-desde-el-codigo.md)**.
+**Linux**
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python packaging/descargar_ffmpeg.py
+.venv/bin/python -m tunedrop
+```
+
+Qué hace cada línea:
+1. Crea `.venv`, una carpeta con las librerías de este proyecto, separada del resto del sistema.
+2. Instala las librerías de la app y las herramientas para tests y compilar.
+3. Descarga ffmpeg en `bin/` (si ya lo tienes instalado en el sistema, puedes saltarte este paso).
+4. Abre la app.
+
+Para pasar los tests: `.venv\Scripts\python -m pytest` (Linux: `.venv/bin/python -m pytest`).
 
 ## Documentación
 

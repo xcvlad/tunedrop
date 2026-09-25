@@ -36,9 +36,9 @@ def ffmpeg_path() -> str:
     found = _find_in_bins("ffmpeg") or shutil.which("ffmpeg")
     if not found:
         if sys.platform == "win32":
-            ayuda = "Ejecuta desde-el-codigo\\1_instalar.bat (lo descarga solo) o instálalo con `winget install Gyan.FFmpeg`"
+            ayuda = "Ejecuta `python packaging\\descargar_ffmpeg.py` (lo descarga solo) o instálalo con `winget install Gyan.FFmpeg`"
         else:
-            ayuda = "Ejecuta bash desde-el-codigo/1_instalar.sh (lo descarga solo) o instálalo con `sudo apt install ffmpeg`"
+            ayuda = "Ejecuta `python3 packaging/descargar_ffmpeg.py` (lo descarga solo) o instálalo con `sudo apt install ffmpeg`"
         raise MissingToolError(f"No se encontró ffmpeg. {ayuda} y vuelve a abrir tunedrop.")
     return found
 
