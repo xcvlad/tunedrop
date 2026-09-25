@@ -192,6 +192,15 @@ function Install-Tunedrop {
         return $bajado
     }
 
+    # Borra el instalador descargado. No usamos Remove-Item: en algunos Windows la
+    # carpeta temporal tiene un nombre corto (por ejemplo C:\Users\VLADJR~1\...), y
+    # Remove-Item se lia con el y detiene el script con un error aunque le pidamos
+    # que lo ignore. [IO.File]::Delete entiende esos nombres y, si el archivo ya
+    # no existe, no hace nada.
+    function Remove-Descarga($ruta) {
+        try { [IO.File]::Delete($ruta) } catch { }
+    }
+
     function Show-AvisoBloqueo {
         # Smart App Control (Windows 11) solo deja ejecutar programas firmados con un
         # certificado o muy conocidos. tunedrop todavia no esta firmado, asi que lo bloquea
@@ -254,7 +263,7 @@ function Install-Tunedrop {
         try {
             $bajado = Save-Archivo "https://github.com/$repo/releases/download/$etiqueta/$archivo" $destino
         } catch {
-            Remove-Item $destino -ErrorAction SilentlyContinue       # por si quedo a medias
+            Remove-Descarga $destino       # por si quedo a medias
             Show-Fallo "No se pudo descargar $archivo." "Comprueba tu conexion a internet y vuelve a intentarlo."
             return
         }
@@ -280,7 +289,7 @@ function Install-Tunedrop {
             Show-AvisoBloqueo
             return
         } finally {
-            Remove-Item $destino -ErrorAction SilentlyContinue
+            Remove-Descarga $destino
         }
         if ($p.ExitCode -ne 0) {
             Show-Fallo "El instalador termino con el codigo $($p.ExitCode)."
