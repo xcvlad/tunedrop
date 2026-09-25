@@ -17,12 +17,9 @@ build/
 dist/
 *.spec
 
-# Nix: «result» es el enlace que crea «nix build». flake.lock no se sube a
-# propósito: así Nix usa siempre la versión más reciente de nixos-unstable
-# (y de yt-dlp, que tiene que estar al día para que YouTube funcione).
+# Nix: «result» es el enlace que crea «nix build».
 result
 result-*
-flake.lock
 
 # Binarios descargados: ffmpeg y deno pesan cientos de MB
 bin/

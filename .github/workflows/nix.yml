@@ -40,9 +40,12 @@ jobs:
             exit 1
           fi
 
+      # Igual que lo escribe una persona, pero con el commit exacto que se prueba.
+      # En un PR se usa el último commit de la rama. Si el PR viene de un fork,
+      # ese commit no está en este repositorio y el paso se salta.
       - name: El comando que usan las personas (nix run github:...)
-        if: github.event_name != 'pull_request'    # en un PR, ese commit aún no está en el repo
-        run: nix run "github:${{ github.repository }}/${{ github.sha }}" -- --comprobar
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: nix run "github:${{ github.repository }}/${{ github.event.pull_request.head.sha || github.sha }}" -- --comprobar
 
       - name: El entorno para programar (nix develop)
         run: nix develop -c python -m pytest -q

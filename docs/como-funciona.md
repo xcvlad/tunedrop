@@ -14,6 +14,7 @@ tunedrop/
 │   └── linux.sh              ←   Descarga la versión de Linux y la añade al menú
 │
 ├── flake.nix                 ← RECETA PARA NIXOS: cómo monta Nix la app desde el código
+├── flake.lock                ←   Qué versión exacta de NixOS (nixpkgs) usa esa receta
 │
 ├── README.md                 ← La portada del proyecto en GitHub
 ├── LICENSE                   ← La licencia (MIT): qué se puede hacer con el código
@@ -75,7 +76,7 @@ Carpetas que **aparecen en tu ordenador pero no se suben** a GitHub (están en `
 | `.venv/` | El entorno virtual con las librerías | Cada programador lo crea en su PC (ver [Para programadores](../README.md#para-programadores)) |
 | `bin/` | `ffmpeg` y `deno` (con `.exe` en Windows) | Pesan cientos de MB y se descargan solos |
 | `build/`, `dist/` | Resultado de crear el programa | Se publica en *Releases*, no en el código |
-| `result`, `flake.lock` | Lo que crea Nix al ejecutar `nix build` | `result` es solo un enlace al programa montado. `flake.lock` no se sube a propósito: sin él, Nix usa siempre lo más reciente de NixOS (y de yt-dlp) |
+| `result` | Lo que crea Nix al ejecutar `nix build` | Es solo un enlace al programa montado |
 
 ## Cómo funciona por dentro
 

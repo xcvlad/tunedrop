@@ -22,6 +22,8 @@
   # De dónde salen las piezas: la rama «nixos-unstable» de nixpkgs.
   # Es la que antes recibe las versiones nuevas de yt-dlp, y yt-dlp tiene que
   # estar al día porque YouTube cambia cada pocas semanas.
+  # flake.lock apunta a una versión exacta de esa rama (Nix lo exige para
+  # «nix run github:...»). Para pasar a la más reciente:  nix flake update
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs = { self, nixpkgs }:
