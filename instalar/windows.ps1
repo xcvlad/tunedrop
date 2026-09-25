@@ -17,6 +17,22 @@
 #  con «irm | iex», «exit» cerraría la ventana de PowerShell del usuario.
 # ============================================================
 
+function Show-AvisoBloqueo {
+    # Smart App Control (Windows 11) solo deja ejecutar programas firmados con un
+    # certificado o muy conocidos. tunedrop todavia no esta firmado, asi que lo bloquea
+    # sin opcion de "ejecutar de todas formas". No hay nada que el script pueda hacer.
+    Write-Host ""
+    Write-Host " [X] Windows no deja instalar tunedrop en este ordenador." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "     Lo mas probable es que tengas activado 'Control inteligente de aplicaciones'"
+    Write-Host "     (Smart App Control)."
+    Write-Host "     Es una proteccion de Windows 11 que solo permite programas con firma digital,"
+    Write-Host "     y tunedrop aun no la tiene. No es un virus ni un fallo de tu ordenador."
+    Write-Host ""
+    Write-Host "     Mas informacion: https://github.com/xcvlad/tunedrop#smart-app-control"
+    Write-Host ""
+}
+
 function Install-Tunedrop {
     $ErrorActionPreference = "Stop"
     $ProgressPreference = "SilentlyContinue"   # la barra de progreso de PowerShell 5 hace la descarga muy lenta
@@ -28,6 +44,15 @@ function Install-Tunedrop {
     Write-Host ""
     Write-Host " === Instalando tunedrop ===" -ForegroundColor Cyan
     Write-Host ""
+
+    # Antes de descargar 115 MB, comprobamos si Smart App Control lo va a bloquear.
+    # Su estado se guarda en el registro: 0 = apagado, 1 = activado, 2 = en evaluacion.
+    # (Cuando tunedrop este firmado, esta comprobacion se podra quitar.)
+    $sac = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\CI\Policy" -ErrorAction SilentlyContinue).VerifiedAndReputablePolicyState
+    if ($sac -eq 1) {
+        Show-AvisoBloqueo
+        return
+    }
 
     # --- 1. Buscar la última versión --------------------------
     # La pagina .../releases/latest redirige a la ultima version, por ejemplo
@@ -56,15 +81,26 @@ function Install-Tunedrop {
     try {
         Invoke-WebRequest "https://github.com/$repo/releases/download/$etiqueta/$archivo" -OutFile $destino -UseBasicParsing
     } catch {
+        Remove-Item $destino -ErrorAction SilentlyContinue       # por si quedo a medias
         Write-Host " [X] No se pudo descargar $archivo. Comprueba tu conexion a internet." -ForegroundColor Red
         return
     }
 
     # --- 3. Instalar sin preguntas ------------------------------
     # Opciones de Inno Setup: /VERYSILENT sin ventanas, /TASKS crea el icono del escritorio.
+    # «finally» se ejecuta siempre, vaya bien o mal: asi el instalador descargado
+    # nunca se queda olvidado en la carpeta temporal.
     Write-Host " [3/3] Instalando ..."
-    $p = Start-Process $destino -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS="desktopicon"' -Wait -PassThru
-    Remove-Item $destino -ErrorAction SilentlyContinue
+    try {
+        $p = Start-Process $destino -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS="desktopicon"' -Wait -PassThru
+    } catch {
+        # Otra proteccion de Windows (por ejemplo, la de un ordenador de empresa o instituto)
+        # tambien puede bloquearlo. El mensaje es el mismo.
+        Show-AvisoBloqueo
+        return
+    } finally {
+        Remove-Item $destino -ErrorAction SilentlyContinue
+    }
     if ($p.ExitCode -ne 0) {
         Write-Host " [X] El instalador termino con el codigo $($p.ExitCode)." -ForegroundColor Red
         return

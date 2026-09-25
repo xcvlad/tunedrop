@@ -48,6 +48,16 @@ Se instala con **un solo comando**. No necesitas Python ni nada más: el comando
 
 Para desinstalarlo: *Configuración → Aplicaciones → tunedrop → Desinstalar*.
 
+### Smart App Control
+
+Algunos Windows 11 tienen activado **Control inteligente de aplicaciones** (*Smart App Control*). Es una protección que solo deja ejecutar programas con **firma digital** (un certificado que identifica al autor) o que ya usan millones de personas. tunedrop es nuevo y **todavía no está firmado**, así que en esos ordenadores Windows no deja instalarlo. El instalador lo detecta y te avisa antes de descargar nada.
+
+- No es un virus ni un fallo de tu ordenador.
+- **No te recomendamos apagar esa protección**: Windows no deja volver a encenderla sin reinstalar el sistema.
+- Estamos trabajando para firmar el programa. Cuando lo esté, funcionará también en esos ordenadores.
+
+Puedes ver si lo tienes activado en *Seguridad de Windows → Control de aplicaciones y navegador → Control inteligente de aplicaciones*.
+
 ### Linux
 
 1. Abre una terminal.
