@@ -10,8 +10,6 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-import yt_dlp
-
 from .converter import convert
 from .models import AudioFormat, Track
 from .paths import build_output_path, unique_path
@@ -67,6 +65,8 @@ def download_track(
     progress: ProgressCallback,
     cancel_event: threading.Event | None = None,
 ) -> DownloadResult:
+    import yt_dlp  # se carga aquí y no arriba para que la ventana aparezca antes (ver ui/startup.py)
+
     cancel_event = cancel_event or threading.Event()
 
     def check_cancel():

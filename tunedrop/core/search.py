@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import re
 
-import yt_dlp
-
 from .models import Track
 from .runtime import base_ydl_options
 
@@ -38,6 +36,10 @@ def resolve(url: str) -> list[Track]:
 
 
 def _extract(target: str) -> list[Track]:
+    # yt-dlp se importa aquí y no arriba: tarda en cargarse y así la ventana
+    # de la app aparece antes (ver ui/startup.py).
+    import yt_dlp
+
     opts = {**base_ydl_options(), "extract_flat": "in_playlist", "skip_download": True}
     try:
         with yt_dlp.YoutubeDL(opts) as ydl:

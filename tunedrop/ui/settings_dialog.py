@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import yt_dlp
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QSpinBox, QVBoxLayout,
@@ -54,7 +53,9 @@ class SettingsDialog(QDialog):
         note.setObjectName("Muted")
         note.setWordWrap(True)
 
-        versions = QLabel(f"tunedrop {__version__} · yt-dlp {yt_dlp.version.__version__}")
+        from yt_dlp.version import __version__ as ytdlp_version  # ver ui/startup.py
+
+        versions = QLabel(f"tunedrop {__version__} · yt-dlp {ytdlp_version}")
         versions.setObjectName("Muted")
 
         cancel = QPushButton("Cancelar")
