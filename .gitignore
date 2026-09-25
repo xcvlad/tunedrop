@@ -1,0 +1,35 @@
+# Archivos que git NO debe subir a GitHub.
+
+# Python: cachés y entorno virtual (cada persona crea el suyo con 1_instalar.bat)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Secretos (nunca se suben)
+.env
+.env.*
+
+# Resultados de compilar (se publican en Releases, no en el código)
+build/
+dist/
+*.spec
+
+# Binarios descargados: ffmpeg y deno pesan cientos de MB
+bin/
+
+# Audio de pruebas y archivos de diagnóstico
+*.mp3
+*.m4a
+*.opus
+*.webm
+tunedrop-comprobacion.txt
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

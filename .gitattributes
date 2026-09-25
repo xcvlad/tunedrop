@@ -1,0 +1,10 @@
+# Cómo trata git los saltos de línea de cada tipo de archivo.
+* text=auto
+# Los .bat y .iss los ejecuta Windows: necesitan saltos de línea CRLF.
+*.bat text eol=crlf
+*.iss text eol=crlf
+# Imágenes: son binarias, no se tocan.
+*.png binary
+*.ico binary
+# Los .sh los ejecuta Linux: necesitan saltos de línea LF (con CRLF, bash falla).
+*.sh text eol=lf
