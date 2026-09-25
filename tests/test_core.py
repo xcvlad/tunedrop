@@ -1,6 +1,8 @@
 import io
 import shutil
 import subprocess
+import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -9,7 +11,7 @@ from mutagen.mp4 import MP4
 from PIL import Image
 
 from tunedrop.core.converter import build_command
-from tunedrop.core.downloader import build_tags
+from tunedrop.core.downloader import build_tags, save_to_destination
 from tunedrop.core.history import History
 from tunedrop.core.models import AudioFormat, Track
 from tunedrop.core.paths import build_output_path, sanitize, unique_path
@@ -74,6 +76,43 @@ def test_unique_path(tmp_path):
     f = tmp_path / "x.mp3"
     f.write_bytes(b"")
     assert unique_path(f) == tmp_path / "x (2).mp3"
+
+
+def test_save_to_destination_copies_and_cleans_partial(tmp_path):
+    src = tmp_path / "out.mp3"
+    src.write_bytes(b"audio")
+    target = tmp_path / "musica" / "A - T.mp3"
+    save_to_destination(src, target)
+    assert target.read_bytes() == b"audio"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="los permisos (ACL) solo existen en Windows")
+def test_save_to_destination_inherits_folder_permissions(tmp_path):
+    def permisos(f: Path) -> str:
+        salida = subprocess.run(["icacls", str(f)], capture_output=True, text=True).stdout
+        # icacls acaba con una línea de resumen tras una línea en blanco: nos quedamos
+        # solo con los permisos, sin la ruta del archivo ni los espacios de alineación.
+        bloque = salida.replace(str(f), "").split("\n\n")[0]
+        return "\n".join(linea.strip() for linea in bloque.splitlines())
+
+    # Carpeta de destino con un permiso extra (S-1-1-0 = «Todos»), para que se note
+    # si la canción lo hereda o trae los permisos de su carpeta temporal.
+    musica = tmp_path / "musica"
+    musica.mkdir()
+    subprocess.run(["icacls", str(musica), "/grant", "*S-1-1-0:(OI)(CI)R"], capture_output=True, check=True)
+
+    workdir = Path(tempfile.mkdtemp())  # carpeta privada, como en download_track
+    try:
+        src = workdir / "out.mp3"
+        src.write_bytes(b"audio")
+        target = musica / "A - T.mp3"
+        save_to_destination(src, target)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+    referencia = musica / "creado_aqui.mp3"
+    referencia.write_bytes(b"x")
+    assert permisos(target) == permisos(referencia)
 
 
 # --- búsqueda ------------------------------------------------------------------

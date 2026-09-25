@@ -124,12 +124,28 @@ def download_track(
         cover = _best_cover(info)
         write_tags(temp_out, tags, cover)
 
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.move(str(temp_out), target)
+        save_to_destination(temp_out, target)
         progress(Stage.DONE, 1.0, "")
         return DownloadResult(target, info.get("abr"), info.get("acodec"))
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+def save_to_destination(temp_file: Path, target: Path) -> None:
+    """Deja la canción terminada en la carpeta de música.
+
+    Se COPIA (y la temporal se borra después) en vez de moverla. En Windows, mover un
+    archivo conserva sus permisos, y la carpeta temporal de Python (mkdtemp) es privada:
+    la canción llegaba a Música sin tu usuario en los permisos, y en algunos PC pedía
+    permisos de administrador para abrirla. Un archivo copiado es nuevo y hereda los
+    permisos normales de la carpeta de destino.
+    """
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copyfile(temp_file, target)
+    except BaseException:
+        target.unlink(missing_ok=True)  # no dejar una canción a medias
+        raise
 
 
 def build_tags(info: dict, track: Track) -> Tags:
