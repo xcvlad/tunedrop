@@ -41,7 +41,7 @@
         builtins.head (builtins.head encontradas);
 
       # La receta del paquete.
-      tunedrop = pkgs:
+      receta = pkgs:
         let
           py = pkgs.python3Packages;
         in
@@ -135,7 +135,7 @@
     {
       # «nix build» y «nix run» usan este paquete.
       packages = paraCadaSistema (pkgs: rec {
-        tunedrop = tunedrop pkgs;
+        tunedrop = receta pkgs;
         default = tunedrop;
       });
 
