@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#instalar"><b>⬇ Instalar en Windows y Linux</b></a> ·
+  <a href="#instalar"><b>⬇ Instalar en Windows, Linux y NixOS</b></a> ·
   <a href="docs/como-funciona.md">Cómo funciona</a> ·
   <a href="#para-programadores">Para programadores</a>
 </p>
@@ -35,7 +35,7 @@
 
 ## Instalar
 
-Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Para actualizar, vuelve a ejecutarlo.
+Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Mientras trabaja, te enseña cada paso con una barra de progreso. Para actualizar, vuelve a ejecutarlo.
 
 ### Windows
 
@@ -73,7 +73,35 @@ Para desinstalarlo:
 curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash -s -- --desinstalar
 ```
 
+> ¿Usas NixOS? Ese comando no sirve allí: mira el apartado [NixOS](#nixos).
+
 > Si la ventana no se abre y ves un error sobre `xcb`, instala la librería que Qt necesita: `sudo apt install libxcb-cursor0` (Ubuntu/Debian), `sudo dnf install xcb-util-cursor` (Fedora) o `sudo pacman -S xcb-util-cursor` (Arch). El instalador ya te avisa si te falta.
+
+### NixOS
+
+En NixOS las librerías están en sitios distintos que en otras distribuciones, así que el programa del comando de Linux no funciona. En su lugar, Nix monta tunedrop desde el código con [`flake.nix`](flake.nix), usando los paquetes oficiales de NixOS. También sirve en cualquier Linux que tenga [Nix](https://nixos.org/download/) instalado, incluidos los PC con procesador ARM.
+
+**Probarlo sin instalar nada:**
+```bash
+nix run github:xcvlad/tunedrop
+```
+
+**Instalarlo para siempre**, si tu sistema usa flakes. Añade tunedrop a las entradas del `flake.nix` de tu sistema:
+```nix
+inputs.tunedrop.url = "github:xcvlad/tunedrop";
+inputs.tunedrop.inputs.nixpkgs.follows = "nixpkgs";   # usa tu misma versión de nixpkgs
+```
+Después añádelo a tus paquetes (pasa `inputs` a tu configuración con `specialArgs`) y reconstruye el sistema con `sudo nixos-rebuild switch`:
+```nix
+environment.systemPackages = [
+  inputs.tunedrop.packages.${pkgs.stdenv.hostPlatform.system}.default
+];
+```
+tunedrop aparece en el menú de aplicaciones. Para actualizarlo: `nix flake update tunedrop` en la carpeta de tu configuración, y vuelve a reconstruir.
+
+**Sin tocar la configuración del sistema**, solo para tu usuario: `nix profile install github:xcvlad/tunedrop` (para actualizar: `nix profile upgrade tunedrop`).
+
+> Si Nix responde que `nix-command` o `flakes` son *experimental features*, añade esto justo después de `nix` en cada comando: `--extra-experimental-features 'nix-command flakes'`.
 
 ### Cómo se usa
 
@@ -81,7 +109,7 @@ curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux
 2. Pulsa **+** en las que quieras.
 3. Pulsa **Descargar**. Las canciones aparecen en tu carpeta de música, dentro de `tunedrop`, con el nombre `Artista - Título.mp3`.
 
-> Pegar en la terminal un comando de internet es cómodo, pero solo debes hacerlo si confías en quien lo publica. Puedes leer antes lo que hace cada script: [`instalar/windows.ps1`](instalar/windows.ps1) y [`instalar/linux.sh`](instalar/linux.sh). Y si quieres comprobar que el programa descargado es legítimo, mira [¿Es fiable?](#es-fiable).
+> Pegar en la terminal un comando de internet es cómodo, pero solo debes hacerlo si confías en quien lo publica. Puedes leer antes lo que hace cada script: [`instalar/windows.ps1`](instalar/windows.ps1), [`instalar/linux.sh`](instalar/linux.sh) y [`flake.nix`](flake.nix). Y si quieres comprobar que el programa descargado es legítimo, mira [¿Es fiable?](#es-fiable).
 
 ## Para programadores
 
@@ -111,12 +139,19 @@ Qué hace cada línea:
 
 Para pasar los tests: `.venv\Scripts\python -m pytest` (Linux: `.venv/bin/python -m pytest`).
 
+**NixOS**: allí `.venv` no funciona, porque las librerías de pip no encuentran las del sistema. En su lugar, `nix develop` abre una terminal con Python, las librerías, ffmpeg y Deno ya preparados:
+```bash
+nix develop
+python -m tunedrop      # abre la app
+python -m pytest        # pasa los tests
+```
+
 ## Documentación
 
 | Guía | Para qué |
 |---|---|
 | [Cómo funciona](docs/como-funciona.md) | Qué es cada archivo, cómo funciona la app por dentro y un glosario de palabras técnicas. |
-| [Cómo se fabrica el programa](docs/como-se-fabrica.md) | Cómo GitHub crea el programa de Windows y Linux, y cómo comprobar que una descarga es legítima. |
+| [Cómo se fabrica el programa](docs/como-se-fabrica.md) | Cómo GitHub crea el programa de Windows y Linux, cómo lo monta Nix en NixOS y cómo comprobar que una descarga es legítima. |
 
 ## ¿Es fiable?
 
@@ -145,6 +180,7 @@ YouTube guarda el audio a unos **128-160 kbps** (formatos Opus o AAC). Convertir
 | [mutagen](https://github.com/quodlibet/mutagen) | Etiquetas y carátula | GPL-2.0+ |
 | [Pillow](https://python-pillow.org/) | Preparar la carátula | MIT-CMU |
 | [PyInstaller](https://pyinstaller.org/) · [Inno Setup](https://jrsoftware.org/isinfo.php) | Crear el programa y el instalador de Windows | GPL con excepción · propia |
+| [Nix](https://nixos.org/) | Crear el paquete de NixOS | LGPL-2.1 |
 
 ## Aviso legal
 

@@ -13,6 +13,8 @@ tunedrop/
 │   ├── windows.ps1           ←   Descarga el instalador de la última Release y lo ejecuta
 │   └── linux.sh              ←   Descarga la versión de Linux y la añade al menú
 │
+├── flake.nix                 ← RECETA PARA NIXOS: cómo monta Nix la app desde el código
+│
 ├── README.md                 ← La portada del proyecto en GitHub
 ├── LICENSE                   ← La licencia (MIT): qué se puede hacer con el código
 ├── requirements.txt          ← Lista de librerías que necesita la app
@@ -50,11 +52,14 @@ tunedrop/
 │   ├── build.py              ←   Script que lo hace todo, paso a paso
 │   ├── lanzador.py           ←   Arranque del .exe
 │   ├── instalador.iss        ←   Receta del instalador (Inno Setup)
+│   ├── instalador-*.png      ←   Imágenes de la ventana del instalador
+│   ├── crear_imagenes_instalador.py ← Dibuja esas imágenes (solo para cambiar el diseño)
 │   ├── descargar_ffmpeg.py   ←   Descarga ffmpeg en bin/
 │   └── icono.ico             ←   Icono del .exe
 │
 ├── .github/workflows/        ← AUTOMATIZACIÓN EN GITHUB
 │   ├── tests.yml             ←   Pasa los tests en Windows y Linux en cada subida
+│   ├── nix.yml               ←   Comprueba que flake.nix funciona (en cada subida y cada lunes)
 │   └── release.yml           ←   Compila y publica las dos versiones al crear una versión
 │
 ├── docs/                     ← Estas guías y la captura del README
@@ -70,6 +75,7 @@ Carpetas que **aparecen en tu ordenador pero no se suben** a GitHub (están en `
 | `.venv/` | El entorno virtual con las librerías | Cada programador lo crea en su PC (ver [Para programadores](../README.md#para-programadores)) |
 | `bin/` | `ffmpeg` y `deno` (con `.exe` en Windows) | Pesan cientos de MB y se descargan solos |
 | `build/`, `dist/` | Resultado de crear el programa | Se publica en *Releases*, no en el código |
+| `result`, `flake.lock` | Lo que crea Nix al ejecutar `nix build` | `result` es solo un enlace al programa montado. `flake.lock` no se sube a propósito: sin él, Nix usa siempre lo más reciente de NixOS (y de yt-dlp) |
 
 ## Cómo funciona por dentro
 
@@ -127,6 +133,10 @@ Aun así, **la conexión es directa**: yt-dlp funciona *dentro* de tunedrop, en 
 | **VBR / CBR** | Tasa variable (usa más bits solo donde hace falta) o tasa fija. |
 | **PyInstaller** | Empaqueta Python y la app en un programa (`.exe` en Windows) que funciona sin instalar Python. |
 | **Inno Setup** | Crea el instalador (`setup.exe`) de Windows. |
+| **NixOS / Nix** | NixOS es una distribución de Linux en la que todo el sistema se describe en archivos de configuración. Nix es su gestor de paquetes, y también funciona en otros Linux. |
+| **Flake** | Un proyecto de Nix: dice de dónde salen las piezas (*inputs*) y qué se puede construir (*outputs*). El nuestro es `flake.nix`. |
+| **nixpkgs** | El catálogo oficial de paquetes de NixOS. De ahí salen Python, Qt, yt-dlp, ffmpeg y Deno cuando se usa `flake.nix`. |
+| **Códigos ANSI** | Secuencias especiales que una terminal entiende como «cambia de color» o «borra esta línea». Los usan los comandos de instalar para los colores y la barra de progreso. |
 | **git** | Programa que guarda el historial de cambios del código. |
 | **GitHub** | Web donde se publica el repositorio git. |
 | **Commit** | Una «foto» guardada del proyecto con un mensaje que explica qué cambió. |

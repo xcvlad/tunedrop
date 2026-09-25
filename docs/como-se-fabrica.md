@@ -1,4 +1,4 @@
-# Cómo se fabrica el programa (Windows y Linux)
+# Cómo se fabrica el programa (Windows, Linux y NixOS)
 
 [← Volver al README](../README.md)
 
@@ -37,7 +37,7 @@ En Linux no hay instalador tipo `setup.exe`: se descomprime y se ejecuta `./tune
    - arranca mucho más rápido;
    - los antivirus lo marcan menos por error.
 4. **Comprime** la carpeta: `.zip` portable en Windows, `.tar.gz` en Linux.
-5. **Solo en Windows: Inno Setup** lee la receta [`packaging/instalador.iss`](../packaging/instalador.iss) y crea el `setup.exe`. Se instala en `%LOCALAPPDATA%\Programs\tunedrop`, sin pedir permisos de administrador.
+5. **Solo en Windows: Inno Setup** lee la receta [`packaging/instalador.iss`](../packaging/instalador.iss) y crea el `setup.exe`. Se instala en `%LOCALAPPDATA%\Programs\tunedrop`, sin pedir permisos de administrador. Su ventana sigue el modo claro u oscuro de Windows y usa dos imágenes propias (`packaging/instalador-*.png`), dibujadas con [`crear_imagenes_instalador.py`](../packaging/crear_imagenes_instalador.py). Necesita Inno Setup 6.6 o superior.
 6. **Calcula las huellas SHA-256** y las guarda en `SHA256SUMS.txt`.
 
 Para comprobar que el programa resultante funciona sin abrir la ventana:
@@ -61,6 +61,21 @@ git push origin v0.2.0
 ```
 
 En unos 10 minutos aparece la versión nueva en **Releases**, y los comandos de instalación ya la descargan.
+
+## Y en NixOS
+
+En NixOS no se usa nada de lo anterior. NixOS guarda las librerías en `/nix/store` y no en las carpetas de siempre (`/usr/lib`...), así que el programa de Linux que crea PyInstaller no encuentra lo que necesita.
+
+Por eso el repositorio incluye [`flake.nix`](../flake.nix), una receta que Nix sigue para montar tunedrop **desde el código**:
+
+1. Coge del catálogo de NixOS (*nixpkgs*) las mismas librerías que `requirements.txt`: yt-dlp, PySide6, mutagen y Pillow, más ffmpeg y Deno.
+2. Copia la carpeta `tunedrop/` y crea el comando `tunedrop`, preparado para que encuentre ffmpeg, Deno y los complementos de Qt.
+3. Añade el icono y el acceso del menú de aplicaciones.
+4. Pasa los tests. Si alguno falla, no se instala.
+
+No hay nada que compilar ni publicar en *Releases*: cada persona lo monta en su ordenador con `nix run` o `nix profile install`, y Nix descarga ya hechas casi todas las piezas desde su propio servidor (`cache.nixos.org`). Los comandos están en el [README](../README.md#nixos).
+
+El archivo [`.github/workflows/nix.yml`](../.github/workflows/nix.yml) comprueba en GitHub que todo funciona: monta el paquete, ejecuta el autodiagnóstico, abre la ventana sin pantalla y prueba `nix develop`. Se ejecuta en cada subida y también **cada lunes**, porque nixpkgs cambia aunque tunedrop no cambie.
 
 ## Probarlo en tu PC (opcional)
 
