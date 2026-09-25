@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="../../releases/latest"><b>⬇ Descargar para Windows y Linux</b></a> ·
-  <a href="docs/1-como-esta-organizado.md">Cómo funciona</a> ·
+  <a href="docs/como-funciona.md">Cómo funciona</a> ·
   <a href="#para-programadores">Para programadores</a>
 </p>
 
@@ -65,7 +65,7 @@ tunedrop aparece en el menú de aplicaciones, y también se abre escribiendo `tu
 2. Ábrelo, busca una canción y pulsa **+**.
 3. Pulsa **Descargar**. La música aparece en tu carpeta `Música\tunedrop`.
 
-> ⚠ **Windows puede mostrar «Windows protegió su PC»** la primera vez. Pasa con cualquier programa nuevo que no ha pagado un certificado de firma, no porque tenga nada raro. Pulsa **Más información → Ejecutar de todas formas**. Si prefieres no fiarte, puedes [comprobar el archivo](docs/3-crear-el-exe.md#comprobar-una-descarga) o [ejecutarlo desde el código](docs/2-ejecutar-desde-el-codigo.md).
+> ⚠ **Windows puede mostrar «Windows protegió su PC»** la primera vez. Pasa con cualquier programa nuevo que no ha pagado un certificado de firma, no porque tenga nada raro. Pulsa **Más información → Ejecutar de todas formas**. Si prefieres no fiarte, puedes [comprobar el archivo](docs/como-se-fabrica.md#comprobar-una-descarga) o [ejecutarlo desde el código](#para-programadores).
 
 ### Linux
 
@@ -111,16 +111,14 @@ Para pasar los tests: `.venv\Scripts\python -m pytest` (Linux: `.venv/bin/python
 
 | Guía | Para qué |
 |---|---|
-| [1 · Cómo está organizado](docs/1-como-esta-organizado.md) | Qué es cada archivo y cómo funciona la app por dentro. |
-| [2 · Ejecutar desde el código](docs/2-ejecutar-desde-el-codigo.md) | Instalar Python, abrir la app y ejecutar los tests. |
-| [3 · Crear el programa (Windows y Linux)](docs/3-crear-el-exe.md) | Cómo se empaqueta y cómo verificar una descarga. |
-| [4 · Subir el proyecto a GitHub](docs/4-subir-a-github.md) | Guía paso a paso con git, desde cero. |
+| [Cómo funciona](docs/como-funciona.md) | Qué es cada archivo, cómo funciona la app por dentro y un glosario de palabras técnicas. |
+| [Cómo se fabrica el programa](docs/como-se-fabrica.md) | Cómo GitHub crea el programa de Windows y Linux, y cómo comprobar que una descarga es legítima. |
 
 ## ¿Es fiable?
 
 - **Todo el código es abierto**: está en este repositorio y cualquiera puede leerlo.
 - **El programa no se compila en el ordenador de nadie**: lo compila GitHub Actions a partir de este código, con el script [`packaging/build.py`](packaging/build.py). El registro completo de cada compilación es público en la pestaña **Actions**.
-- **Cada descarga se puede verificar**: las Releases incluyen `SHA256SUMS.txt` y un certificado de procedencia (*attestation*) que demuestra que el archivo salió de este repositorio. Cómo se comprueba: [ver guía](docs/3-crear-el-exe.md#comprobar-una-descarga).
+- **Cada descarga se puede verificar**: las Releases incluyen `SHA256SUMS.txt` y un certificado de procedencia (*attestation*) que demuestra que el archivo salió de este repositorio. Cómo se comprueba: [ver guía](docs/como-se-fabrica.md#comprobar-una-descarga).
 - **Sin servidores intermedios, anuncios ni telemetría**: la app se conecta directamente desde tu ordenador a YouTube o a la web que elijas. No envía datos a ningún otro sitio.
 
 ## Sobre la calidad del audio
