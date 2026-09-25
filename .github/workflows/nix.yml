@@ -1,7 +1,10 @@
 # Comprueba que tunedrop se puede instalar y abrir en NixOS (con flake.nix).
 #
-# Se ejecuta al subir código y, además, cada lunes: nixpkgs (el catálogo de
-# NixOS) cambia aunque tunedrop no cambie, y así nos enteramos si algo se rompe.
+# Se ejecuta al subir código y, además, cada lunes. Los lunes también
+# actualiza flake.lock a la versión más reciente de NixOS (y de yt-dlp, que
+# tiene que estar al día para que YouTube funcione). Si con la versión nueva
+# todas las pruebas pasan, sube el flake.lock nuevo a main; si algo falla,
+# no sube nada y GitHub avisa por correo.
 name: NixOS
 
 on:
@@ -10,7 +13,10 @@ on:
   pull_request:
   schedule:
     - cron: "0 6 * * 1"     # los lunes a las 6:00 (hora UTC)
-  workflow_dispatch:
+  workflow_dispatch:        # botón «Run workflow» en la pestaña Actions (también actualiza)
+
+permissions:
+  contents: write           # para poder subir el flake.lock nuevo
 
 jobs:
   nix:
@@ -21,6 +27,10 @@ jobs:
 
       - name: Instalar Nix (con los flakes activados)
         uses: cachix/install-nix-action@v31
+
+      - name: Actualizar flake.lock (solo los lunes o a mano)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: nix flake update
 
       - name: Construir el paquete (Nix también pasa los tests)
         run: nix build -L
@@ -49,3 +59,17 @@ jobs:
 
       - name: El entorno para programar (nix develop)
         run: nix develop -c python -m pytest -q
+
+      # Solo se llega aquí si todos los pasos anteriores han ido bien.
+      - name: Subir el flake.lock nuevo (si ha cambiado)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          if git diff --quiet flake.lock; then
+            echo "flake.lock ya estaba al día."
+            exit 0
+          fi
+          git config user.name "xcvlad"
+          git config user.email "329011136+xcvlad@users.noreply.github.com"
+          git add flake.lock
+          git commit -m "Actualiza flake.lock (NixOS y yt-dlp al día)"
+          git push

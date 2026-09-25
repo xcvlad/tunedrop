@@ -75,7 +75,9 @@ Por eso el repositorio incluye [`flake.nix`](../flake.nix), una receta que Nix s
 
 No hay nada que compilar ni publicar en *Releases*: cada persona lo monta en su ordenador con `nix run` o `nix profile install`, y Nix descarga ya hechas casi todas las piezas desde su propio servidor (`cache.nixos.org`). Los comandos están en el [README](../README.md#nixos).
 
-El archivo [`.github/workflows/nix.yml`](../.github/workflows/nix.yml) comprueba en GitHub que todo funciona: monta el paquete, ejecuta el autodiagnóstico, abre la ventana sin pantalla y prueba `nix develop`. Se ejecuta en cada subida y también **cada lunes**, porque nixpkgs cambia aunque tunedrop no cambie.
+El archivo [`.github/workflows/nix.yml`](../.github/workflows/nix.yml) comprueba en GitHub que todo funciona: monta el paquete, ejecuta el autodiagnóstico, abre la ventana sin pantalla y prueba `nix develop`. Se ejecuta en cada subida y también **cada lunes**.
+
+La versión exacta de nixpkgs que se usa está apuntada en [`flake.lock`](../flake.lock). Nix lo necesita para `nix run github:...`, pero así la versión se queda congelada, y yt-dlp tiene que estar al día para que YouTube siga funcionando. Por eso, cada lunes, `nix.yml` hace `nix flake update` para pasar a la versión más reciente y repite todas las pruebas con ella. Solo si todo va bien, sube el `flake.lock` nuevo a `main`. También se puede lanzar a mano con **Run workflow** en la pestaña *Actions*.
 
 ## Probarlo en tu PC (opcional)
 
