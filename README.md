@@ -81,7 +81,7 @@ tunedrop aparece en el menú de aplicaciones, y también se abre escribiendo `tu
 
 ## Ejecutar desde el código (tres pasos)
 
-Si tienes [Python](https://www.python.org/downloads/) 3.10 o superior instalado:
+Si tienes [Python](https://www.python.org/downloads/) 3.10 o superior instalado, usa los scripts de la carpeta **`desde-el-codigo/`**:
 
 | Windows (doble clic) | Linux (`bash <archivo>` en la terminal) | Qué hace |
 |---|---|---|

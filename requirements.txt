@@ -1,0 +1,8 @@
+# Librerías que necesita tunedrop para funcionar.
+# Se instalan con:  pip install -r requirements.txt   (o con desde-el-codigo/1_instalar.bat)
+
+yt-dlp[default]>=2026.8.19   # habla con YouTube y otras webs para sacar el audio
+deno>=2.0                    # motor JavaScript que yt-dlp necesita para YouTube
+PySide6>=6.8                 # la interfaz gráfica (ventanas, botones...)
+mutagen>=1.47                # escribe las etiquetas (título, artista, carátula) en el MP3
+pillow>=10.0                 # prepara la imagen de la carátula

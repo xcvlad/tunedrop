@@ -1,6 +1,6 @@
 # Archivos que git NO debe subir a GitHub.
 
-# Python: cachés y entorno virtual (cada persona crea el suyo con 1_instalar.bat)
+# Python: cachés y entorno virtual (cada persona crea el suyo con desde-el-codigo/1_instalar.bat)
 __pycache__/
 *.py[cod]
 *.egg-info/

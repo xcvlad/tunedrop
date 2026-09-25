@@ -1,0 +1,6 @@
+# Herramientas extra solo para desarrollar: tests y crear el .exe.
+# Se instalan con:  pip install -r requirements-dev.txt
+
+-r requirements.txt
+pytest>=8          # ejecuta los tests automáticos (carpeta tests/)
+pyinstaller>=6.16  # empaqueta la app en un .exe
