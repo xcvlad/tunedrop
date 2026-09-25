@@ -49,17 +49,24 @@ command -v tar  >/dev/null || fallo "Hace falta tar."
      Puedes ejecutarlo desde el código: https://github.com/$REPO#para-programadores"
 
 # --- 1. Buscar la última versión --------------------------------
-# La API de GitHub devuelve un JSON con los archivos de la última Release.
-# Nos quedamos con la dirección del .tar.gz de Linux.
+# La página .../releases/latest redirige a la última versión, por ejemplo
+# .../releases/tag/v0.1.0. Nos quedamos con el final («v0.1.0»).
+# No usamos la API de GitHub porque solo permite 60 consultas por hora
+# desde la misma red (en un aula, varios alumnos se quedarían sin instalar).
 echo " [1/4] Buscando la última versión ..."
-URL=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-      | grep -o '"browser_download_url": *"[^"]*linux-x86_64\.tar\.gz"' \
-      | grep -o 'https://[^"]*' | head -n 1) || true
-[ -n "$URL" ] || fallo "No se encontró ninguna versión publicada en https://github.com/$REPO/releases"
-echo "       $(basename "$URL")"
+FINAL=$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest") || true
+ETIQUETA="${FINAL##*/}"          # todo lo que va después de la última «/»
+case "$ETIQUETA" in
+    v*) ;;                        # es una versión: seguimos
+    *)  fallo "No se encontró ninguna versión publicada en https://github.com/$REPO/releases" ;;
+esac
+VERSION="${ETIQUETA#v}"          # «v0.1.0» -> «0.1.0»
+ARCHIVO="tunedrop-$VERSION-linux-x86_64.tar.gz"
+URL="https://github.com/$REPO/releases/download/$ETIQUETA/$ARCHIVO"
+echo "       $ARCHIVO"
 
 # --- 2. Descargar y descomprimir --------------------------------
-echo " [2/4] Descargando (más de 100 MB) ..."
+echo " [2/4] Descargando (unos 200 MB) ..."
 TEMPORAL=$(mktemp -d)
 trap 'rm -rf "$TEMPORAL"' EXIT
 curl -fL --progress-bar "$URL" -o "$TEMPORAL/tunedrop.tar.gz"

@@ -30,24 +30,35 @@ function Install-Tunedrop {
     Write-Host ""
 
     # --- 1. Buscar la última versión --------------------------
+    # La pagina .../releases/latest redirige a la ultima version, por ejemplo
+    # .../releases/tag/v0.1.0. Nos quedamos con el final («v0.1.0»).
+    # No usamos la API de GitHub porque solo permite 60 consultas por hora
+    # desde la misma red (en un aula, varios alumnos se quedarian sin instalar).
     Write-Host " [1/3] Buscando la ultima version ..."
     try {
-        $release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest"
+        $r = Invoke-WebRequest "https://github.com/$repo/releases/latest" -Method Head -UseBasicParsing
+        if ($r.BaseResponse.ResponseUri) { $final = $r.BaseResponse.ResponseUri.AbsoluteUri }      # PowerShell 5
+        else { $final = $r.BaseResponse.RequestMessage.RequestUri.AbsoluteUri }                     # PowerShell 7
     } catch {
+        $final = ""
+    }
+    $etiqueta = $final.Split("/")[-1]
+    if (-not $etiqueta.StartsWith("v")) {
         Write-Host " [X] No se encontro ninguna version publicada en https://github.com/$repo/releases" -ForegroundColor Red
         return
     }
-    $setup = $release.assets | Where-Object { $_.name -like "*-setup.exe" } | Select-Object -First 1
-    if (-not $setup) {
-        Write-Host " [X] La ultima version no incluye el instalador de Windows." -ForegroundColor Red
-        return
-    }
-    Write-Host "       $($setup.name)"
+    $archivo = "tunedrop-$($etiqueta.Substring(1))-setup.exe"      # «v0.1.0» -> «tunedrop-0.1.0-setup.exe»
+    Write-Host "       $archivo"
 
     # --- 2. Descargar ------------------------------------------
-    Write-Host " [2/3] Descargando (unos 120 MB) ..."
-    $destino = Join-Path $env:TEMP $setup.name
-    Invoke-WebRequest $setup.browser_download_url -OutFile $destino -UseBasicParsing
+    Write-Host " [2/3] Descargando (unos 115 MB) ..."
+    $destino = Join-Path $env:TEMP $archivo
+    try {
+        Invoke-WebRequest "https://github.com/$repo/releases/download/$etiqueta/$archivo" -OutFile $destino -UseBasicParsing
+    } catch {
+        Write-Host " [X] No se pudo descargar $archivo. Comprueba tu conexion a internet." -ForegroundColor Red
+        return
+    }
 
     # --- 3. Instalar sin preguntas ------------------------------
     # Opciones de Inno Setup: /VERYSILENT sin ventanas, /TASKS crea el icono del escritorio.
