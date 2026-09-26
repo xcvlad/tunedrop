@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="#instalar"><b>⬇ Instalar en Windows, Linux y NixOS</b></a> ·
+  <a href="#instalar"><b>⬇ Instalar en Windows y Linux</b></a> ·
   <a href="docs/como-funciona.md">Cómo funciona</a> ·
   <a href="#para-programadores">Para programadores</a>
 </p>
@@ -61,6 +61,13 @@ Puedes ver si lo tienes activado en *Seguridad de Windows → Control de aplicac
 
 ### Linux
 
+Funciona en cualquier distribución: Ubuntu, Debian, Linux Mint, Fedora, Arch, openSUSE, NixOS…
+
+| Tu Linux | Cómo se instala |
+|---|---|
+| **Casi todos** (Ubuntu, Debian, Mint, Fedora, Arch, openSUSE…) | Con el comando de abajo. |
+| **NixOS** (o cualquier Linux con Nix) | Con Nix: mira [NixOS](#nixos), más abajo. |
+
 1. Abre una terminal.
 2. Copia esta línea, pégala y pulsa Intro:
    ```bash
@@ -73,35 +80,39 @@ Para desinstalarlo:
 curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash -s -- --desinstalar
 ```
 
-> ¿Usas NixOS? Ese comando no sirve allí: mira el apartado [NixOS](#nixos).
-
 > Si la ventana no se abre y ves un error sobre `xcb`, instala la librería que Qt necesita: `sudo apt install libxcb-cursor0` (Ubuntu/Debian), `sudo dnf install xcb-util-cursor` (Fedora) o `sudo pacman -S xcb-util-cursor` (Arch). El instalador ya te avisa si te falta.
 
-### NixOS
+#### NixOS
 
-En NixOS las librerías están en sitios distintos que en otras distribuciones, así que el programa del comando de Linux no funciona. En su lugar, Nix monta tunedrop desde el código con [`flake.nix`](flake.nix), usando los paquetes oficiales de NixOS. También sirve en cualquier Linux que tenga [Nix](https://nixos.org/download/) instalado, incluidos los PC con procesador ARM.
+NixOS guarda las librerías en otro sitio, así que allí el comando de arriba no sirve (si lo pruebas, te lo dice). En su lugar, Nix monta tunedrop a partir del código con [`flake.nix`](flake.nix). Para abrirlo:
 
-**Probarlo sin instalar nada:**
 ```bash
 nix run github:xcvlad/tunedrop
 ```
 
-**Instalarlo para siempre**, si tu sistema usa flakes. Añade tunedrop a las entradas del `flake.nix` de tu sistema:
+<details>
+<summary><b>Instalarlo para siempre en NixOS</b></summary>
+
+<br>
+
+**En la configuración del sistema** (con flakes). Añade tunedrop a las entradas del `flake.nix` de tu sistema:
 ```nix
 inputs.tunedrop.url = "github:xcvlad/tunedrop";
 inputs.tunedrop.inputs.nixpkgs.follows = "nixpkgs";   # usa tu misma versión de nixpkgs
 ```
-Después añádelo a tus paquetes (pasa `inputs` a tu configuración con `specialArgs`) y reconstruye el sistema con `sudo nixos-rebuild switch`:
+Añádelo a tus paquetes (pasa `inputs` a tu configuración con `specialArgs`) y reconstruye con `sudo nixos-rebuild switch`:
 ```nix
 environment.systemPackages = [
   inputs.tunedrop.packages.${pkgs.stdenv.hostPlatform.system}.default
 ];
 ```
-tunedrop aparece en el menú de aplicaciones. Para actualizarlo: `nix flake update tunedrop` en la carpeta de tu configuración, y vuelve a reconstruir.
+Para actualizarlo: `nix flake update tunedrop` en la carpeta de tu configuración, y vuelve a reconstruir.
 
-**Sin tocar la configuración del sistema**, solo para tu usuario: `nix profile install github:xcvlad/tunedrop` (para actualizar: `nix profile upgrade tunedrop`).
+**Solo para tu usuario**, sin tocar la configuración: `nix profile install github:xcvlad/tunedrop` (para actualizar: `nix profile upgrade tunedrop`).
 
-> Si Nix responde que `nix-command` o `flakes` son *experimental features*, añade esto justo después de `nix` en cada comando: `--extra-experimental-features 'nix-command flakes'`.
+> Si Nix responde que `nix-command` o `flakes` son *experimental features*, añade `--extra-experimental-features 'nix-command flakes'` justo después de `nix` en cada comando.
+
+</details>
 
 ### Cómo se usa
 
@@ -139,19 +150,14 @@ Qué hace cada línea:
 
 Para pasar los tests: `.venv\Scripts\python -m pytest` (Linux: `.venv/bin/python -m pytest`).
 
-**NixOS**: allí `.venv` no funciona, porque las librerías de pip no encuentran las del sistema. En su lugar, `nix develop` abre una terminal con Python, las librerías, ffmpeg y Deno ya preparados:
-```bash
-nix develop
-python -m tunedrop      # abre la app
-python -m pytest        # pasa los tests
-```
+> En NixOS, `.venv` no funciona: usa `nix develop`, que abre una terminal con todo preparado, y dentro `python -m tunedrop` o `python -m pytest`.
 
 ## Documentación
 
 | Guía | Para qué |
 |---|---|
 | [Cómo funciona](docs/como-funciona.md) | Qué es cada archivo, cómo funciona la app por dentro y un glosario de palabras técnicas. |
-| [Cómo se fabrica el programa](docs/como-se-fabrica.md) | Cómo GitHub crea el programa de Windows y Linux, cómo lo monta Nix en NixOS y cómo comprobar que una descarga es legítima. |
+| [Cómo se fabrica el programa](docs/como-se-fabrica.md) | Cómo GitHub crea el programa de Windows y Linux (y cómo lo monta Nix en NixOS), y cómo comprobar que una descarga es legítima. |
 
 ## ¿Es fiable?
 
