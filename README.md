@@ -31,12 +31,13 @@
   - Carátula incrustada.
   - **La letra de cada canción**, dentro del archivo: el iPod la muestra al pulsar el botón central. Si tu reproductor lo admite, también puede guardar un `.lrc` con la letra sincronizada, que va apareciendo a la vez que suena.
   - Todas las canciones juntas en una carpeta, con nombres ordenados: `Artista - Título.mp3`.
-  - Títulos limpios, sin «(Official Video)».
+  - Títulos limpios, sin «(Official Video)», «(Lyrics)», «(Remastered 2011)» y demás relleno, pero conservando «(feat. …)», «(Live)» o «(Remix)».
 - 🎚 **Calidad a elegir**: MP3 V0 (recomendado), MP3 320 kbps o M4A original sin pérdidas extra.
+- 🔔 **Te avisa cuando hay una versión nueva**, y en Windows y Linux se actualiza con un clic.
 
 ## Instalar
 
-Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Mientras trabaja, te enseña cada paso con una barra de progreso. Para actualizar, vuelve a ejecutarlo.
+Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Mientras trabaja, te enseña cada paso con una barra de progreso. Para actualizar, pulsa **Actualizar** en el aviso que sale en la app cuando hay una versión nueva, o vuelve a ejecutar el comando.
 
 ### Windows
 
@@ -165,7 +166,7 @@ Para pasar los tests: `.venv\Scripts\python -m pytest` (Linux: `.venv/bin/python
 - **Todo el código es abierto**: está en este repositorio y cualquiera puede leerlo.
 - **El programa no se compila en el ordenador de nadie**: lo compila GitHub Actions a partir de este código, con el script [`packaging/build.py`](packaging/build.py). El registro completo de cada compilación es público en la pestaña **Actions**.
 - **Cada descarga se puede verificar**: las Releases incluyen `SHA256SUMS.txt` y un certificado de procedencia (*attestation*) que demuestra que el archivo salió de este repositorio. Cómo se comprueba: [ver guía](docs/como-se-fabrica.md#comprobar-una-descarga).
-- **Sin servidores intermedios, anuncios ni telemetría**: la app se conecta directamente desde tu ordenador a YouTube o a la web que elijas. Para las letras consulta además [LRCLIB](https://lrclib.net), una base de datos de letras gratuita y abierta, a la que solo envía el artista, el título y la duración de la canción. Se puede desactivar en *Ajustes → Letras*. No envía datos a ningún otro sitio.
+- **Sin servidores intermedios, anuncios ni telemetría**: la app se conecta directamente desde tu ordenador a YouTube o a la web que elijas. Para las letras consulta además [LRCLIB](https://lrclib.net), una base de datos de letras gratuita y abierta, a la que solo envía el artista, el título y la duración de la canción. Se puede desactivar en *Ajustes → Letras*. Y, al abrirse, pregunta a GitHub cuál es la última versión de tunedrop, para avisarte si hay una nueva (también se puede desactivar en *Ajustes*). No envía datos a ningún otro sitio.
 
 ## Sobre la calidad del audio
 

@@ -62,7 +62,7 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-En unos 10 minutos aparece la versión nueva en **Releases**, y los comandos de instalación ya la descargan.
+En unos 10 minutos aparece la versión nueva en **Releases**, y los comandos de instalación ya la descargan. Las tunedrop ya instaladas la detectan al abrirse y muestran el aviso de versión nueva.
 
 ## Y en NixOS
 

@@ -38,10 +38,13 @@ tunedrop/
 │   │   ├── models.py         ←     Qué es una «canción» (Track) y los formatos
 │   │   ├── settings.py       ←     Guarda tus ajustes
 │   │   ├── history.py        ←     Recuerda qué has descargado ya
-│   │   └── runtime.py        ←     Encuentra ffmpeg y Deno en el ordenador
+│   │   ├── runtime.py        ←     Encuentra ffmpeg y Deno en el ordenador
+│   │   └── updates.py        ←     Mira en GitHub si hay una versión nueva
 │   │
 │   └── ui/                   ←   La interfaz: todo lo que ves
 │       ├── main_window.py    ←     La ventana principal
+│       ├── startup.py        ←     Pantalla de carga y «una sola tunedrop abierta»
+│       ├── update_banner.py  ←     El aviso «Hay una versión nueva» y el botón Actualizar
 │       ├── widgets.py        ←     Las tarjetas de cada canción
 │       ├── settings_dialog.py←     La ventana de ajustes (⚙)
 │       ├── workers.py        ←     Trabajo en segundo plano (la ventana no se congela)
@@ -130,6 +133,12 @@ Aun así, **la conexión es directa**: yt-dlp funciona *dentro* de tunedrop, en 
 3. Si la más parecida dura más de 10 segundos de diferencia, seguramente es otra versión: guarda el texto, pero no los tiempos, porque no cuadrarían.
 
 La letra se busca **a la vez** que ffmpeg convierte el audio, así que no hace esperar. Y si LRCLIB no responde o no tiene la canción, la canción se descarga igual, sin letra: la letra es un extra y nunca debe estropear una descarga.
+
+### ¿Cómo sabe si hay una versión nueva?
+
+Al abrirse, `updates.py` pide a GitHub la página `releases/latest`, que siempre **redirige** a la última versión publicada (por ejemplo, `.../releases/tag/v0.4.0`), y se queda con el final. No usa la API de GitHub, que solo deja hacer 60 consultas por hora desde la misma red.
+
+Si hay una más nueva, `update_banner.py` muestra el aviso. Actualizar es lo mismo que volver a ejecutar el comando de instalar. En Windows, la app abre PowerShell con ese comando y se cierra, para que el instalador pueda reemplazar sus archivos. En Linux, lo ejecuta en segundo plano y después ofrece reiniciar. Con NixOS, el `.zip` o desde el código, solo explica qué hacer.
 
 ## Glosario
 
