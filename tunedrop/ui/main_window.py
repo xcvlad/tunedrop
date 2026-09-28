@@ -384,6 +384,8 @@ class MainWindow(QMainWindow):
             output_dir=Path(self.settings.output_dir),
             audio_format=self.settings.format,
             normalize=self.settings.normalize,
+            lyrics=self.settings.lyrics,
+            lrc_file=self.settings.lyrics and self.settings.lrc_file,
         )
         for key in keys:
             card = self._queue_cards.get(key)

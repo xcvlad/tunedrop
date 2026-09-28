@@ -56,6 +56,8 @@ class Settings:
     normalize: bool = False
     concurrent: int = 3
     skip_downloaded: bool = True
+    lyrics: bool = True        # añadir la letra de cada canción (core/lyrics.py)
+    lrc_file: bool = False     # guardar también un .lrc con la letra sincronizada
 
     @property
     def format(self) -> AudioFormat:

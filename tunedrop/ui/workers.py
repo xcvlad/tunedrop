@@ -102,11 +102,14 @@ class _DownloadJob(QRunnable):
                     self.key, stage.value, frac, extra),
                 self.cancel,
             )
-            quality = ""
+            # Texto que sale en la tarjeta al terminar: «Origen OPUS 135 kbps · ♪ Con letra».
+            partes = []
             if result.source_bitrate:
                 codec = (result.source_codec or "").split(".")[0].replace("mp4a", "AAC").upper()
-                quality = f"Origen {codec} {round(result.source_bitrate)} kbps"
-            self.signals.finished.emit(self.key, str(result.path), quality)
+                partes.append(f"Origen {codec} {round(result.source_bitrate)} kbps")
+            if self.options.lyrics:
+                partes.append("♪ Con letra" if result.lyrics else "Sin letra")
+            self.signals.finished.emit(self.key, str(result.path), " · ".join(partes))
         except Cancelled:
             self.signals.cancelled.emit(self.key)
         except Exception as exc:  # noqa: BLE001

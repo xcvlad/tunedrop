@@ -11,8 +11,9 @@ from mutagen.mp4 import MP4
 from PIL import Image
 
 from tunedrop.core.converter import build_command
-from tunedrop.core.downloader import build_tags, save_to_destination
+from tunedrop.core.downloader import build_tags, save_lrc, save_to_destination
 from tunedrop.core.history import History
+from tunedrop.core.lyrics import pick_best, strip_timestamps
 from tunedrop.core.models import AudioFormat, Track
 from tunedrop.core.paths import build_output_path, sanitize, unique_path
 from tunedrop.core.search import entry_to_track, is_url
@@ -205,6 +206,64 @@ def test_write_mp4_tags(tmp_path):
     write_tags(path, Tags(title="T", artist="A", track_number=5), None)
     mp4 = MP4(path)
     assert mp4["\xa9nam"] == ["T"] and mp4["trkn"] == [(5, 0)]
+
+
+@pytest.mark.skipif(not HAS_FFMPEG, reason="ffmpeg no instalado")
+def test_write_lyrics_mp3_and_m4a(tmp_path):
+    letra = "Primera línea\nSegunda línea"
+    mp3 = _silence(tmp_path, "mp3")
+    write_tags(mp3, Tags(title="T", artist="A", lyrics=letra), None)
+    assert ID3(mp3).getall("USLT")[0].text == letra
+    m4a = _silence(tmp_path, "m4a")
+    write_tags(m4a, Tags(title="T", artist="A", lyrics=letra), None)
+    assert MP4(m4a)["\xa9lyr"] == [letra]
+
+
+# --- letras (sin red: resultados de LRCLIB inventados) -------------------------
+
+def _lrclib(duration, plain="Hola\nAdiós", synced="[00:01.00] Hola\n[00:02.50] Adiós", instrumental=False):
+    return {"duration": duration, "plainLyrics": plain, "syncedLyrics": synced,
+            "instrumental": instrumental}
+
+
+def test_pick_best_prefers_same_duration():
+    results = [_lrclib(263, plain="corta"), _lrclib(354, plain="la buena"), _lrclib(317, plain="otra")]
+    assert pick_best(results, 355).plain == "la buena"
+
+
+def test_pick_best_prefers_synced_among_close_durations():
+    results = [_lrclib(355, plain="sin tiempos", synced=None), _lrclib(356, plain="con tiempos")]
+    lyrics = pick_best(results, 355)
+    assert lyrics.plain == "con tiempos" and lyrics.synced
+
+
+def test_pick_best_drops_synced_if_other_version():
+    # La única letra dura 40 s más: el texto sirve, los tiempos no.
+    lyrics = pick_best([_lrclib(395)], 355)
+    assert lyrics.plain == "Hola\nAdiós" and lyrics.synced is None
+
+
+def test_pick_best_without_lyrics():
+    assert pick_best([], 200) is None
+    assert pick_best([_lrclib(200, plain=None, synced=None, instrumental=True)], 200) is None
+
+
+def test_pick_best_plain_from_synced_only():
+    lyrics = pick_best([_lrclib(200, plain=None)], 200)
+    assert lyrics.plain == "Hola\nAdiós"
+
+
+def test_save_lrc_next_to_song(tmp_path):
+    song = tmp_path / "Artista - Canción.mp3"
+    lrc = save_lrc(song, Tags(title="Canción", artist="Artista", album="Disco"), "[00:01.00] Hola")
+    assert lrc.name == "Artista - Canción.lrc"
+    assert lrc.read_bytes().startswith(b"\xef\xbb\xbf")   # UTF-8 con BOM
+    assert lrc.read_text(encoding="utf-8-sig").splitlines() == [
+        "[ar:Artista]", "[ti:Canción]", "[al:Disco]", "[00:01.00] Hola"]
+
+
+def test_strip_timestamps():
+    assert strip_timestamps("[00:01.00] Hola\n[01:02.345]Adiós\n[00:03] Fin") == "Hola\nAdiós\nFin"
 
 
 # --- configuración e historial -------------------------------------------------

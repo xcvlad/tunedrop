@@ -1,4 +1,4 @@
-"""Descarga completa de una canción: audio, conversión, etiquetas y carátula, en la carpeta de música."""
+"""Descarga completa de una canción: audio, conversión, etiquetas, carátula y letra, en la carpeta de música."""
 
 from __future__ import annotations
 
@@ -6,11 +6,13 @@ import shutil
 import tempfile
 import threading
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
 from .converter import convert
+from .lyrics import Lyrics, find_lyrics
 from .models import AudioFormat, Track
 from .paths import build_output_path, unique_path
 from .runtime import base_ydl_options
@@ -43,6 +45,8 @@ class DownloadOptions:
     output_dir: Path
     audio_format: AudioFormat
     normalize: bool = False
+    lyrics: bool = True       # buscar la letra y guardarla dentro de la canción
+    lrc_file: bool = False    # guardar además un .lrc con la letra sincronizada
 
 
 @dataclass
@@ -50,6 +54,7 @@ class DownloadResult:
     path: Path
     source_bitrate: float | None  # kbps reales del audio original
     source_codec: str | None
+    lyrics: Lyrics | None = None  # la letra encontrada (None si no hay o está desactivado)
 
 
 def audio_selector(fmt: AudioFormat) -> str:
@@ -113,6 +118,15 @@ def download_track(
             extension=options.audio_format.extension,
         ))
 
+        # La letra se busca en otro hilo mientras ffmpeg convierte: así no hay que
+        # esperarla. Se busca con el primer artista (no «A, B»), que es como está en LRCLIB.
+        busqueda_letra = None
+        if options.lyrics:
+            hilo_letra = ThreadPoolExecutor(max_workers=1)
+            busqueda_letra = hilo_letra.submit(
+                find_lyrics, tags.album_artist or tags.artist, tags.title, info.get("duration"))
+            hilo_letra.shutdown(wait=False)   # el hilo se cierra solo al terminar la búsqueda
+
         fmt = options.audio_format
         progress(Stage.CONVERTING, 1.0, "")
         temp_out = workdir / f"out.{fmt.extension}"
@@ -122,11 +136,21 @@ def download_track(
 
         progress(Stage.TAGGING, 1.0, "")
         cover = _best_cover(info)
+        lyrics = None
+        if busqueda_letra:
+            try:
+                lyrics = busqueda_letra.result()
+            except Exception:
+                pass   # sin letra: nunca debe estropear la descarga
+        if lyrics:
+            tags.lyrics = lyrics.plain
         write_tags(temp_out, tags, cover)
 
         save_to_destination(temp_out, target)
+        if lyrics and lyrics.synced and options.lrc_file:
+            save_lrc(target, tags, lyrics.synced)
         progress(Stage.DONE, 1.0, "")
-        return DownloadResult(target, info.get("abr"), info.get("acodec"))
+        return DownloadResult(target, info.get("abr"), info.get("acodec"), lyrics)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
@@ -146,6 +170,23 @@ def save_to_destination(temp_file: Path, target: Path) -> None:
     except BaseException:
         target.unlink(missing_ok=True)  # no dejar una canción a medias
         raise
+
+
+def save_lrc(song: Path, tags: Tags, synced: str) -> Path:
+    """Guarda la letra sincronizada en un .lrc junto a la canción y con su mismo nombre.
+
+    Los reproductores que entienden .lrc (Rockbox, muchos MP3 baratos...) lo buscan
+    así: «Artista - Título.lrc» al lado de «Artista - Título.mp3». Las primeras
+    líneas ([ar:], [ti:], [al:]) dicen de qué canción es.
+    """
+    cabecera = [f"[ar:{tags.artist}]", f"[ti:{tags.title}]"]
+    if tags.album:
+        cabecera.append(f"[al:{tags.album}]")
+    lrc = song.with_suffix(".lrc")
+    # UTF-8 con BOM (utf-8-sig): la marca del principio ayuda a los reproductores
+    # antiguos a mostrar bien las tildes y la ñ.
+    lrc.write_text("\n".join([*cabecera, synced]) + "\n", encoding="utf-8-sig")
+    return lrc
 
 
 def build_tags(info: dict, track: Track) -> Tags:

@@ -33,6 +33,17 @@ class SettingsDialog(QDialog):
         self.normalize.setChecked(settings.normalize)
         self.skip = QCheckBox("No volver a descargar canciones que ya tengo")
         self.skip.setChecked(settings.skip_downloaded)
+        self.lyrics = QCheckBox("Añadir la letra de cada canción")
+        self.lyrics.setToolTip("Va dentro del MP3 o M4A. El iPod la muestra al pulsar el botón central.")
+        self.lyrics.setChecked(settings.lyrics)
+        self.lrc = QCheckBox("Guardar también un archivo .lrc con la letra sincronizada")
+        self.lrc.setToolTip(
+            "Un archivo con la letra y el momento en que se canta cada línea, junto a la canción.\n"
+            "Algunos reproductores (Rockbox y muchos MP3) la muestran a la vez que suena.")
+        self.lrc.setChecked(settings.lrc_file)
+        # El .lrc solo tiene sentido si se buscan las letras.
+        self.lrc.setEnabled(settings.lyrics)
+        self.lyrics.toggled.connect(self.lrc.setEnabled)
         self.concurrent = QSpinBox()
         self.concurrent.setRange(1, 6)
         self.concurrent.setValue(settings.concurrent)
@@ -44,11 +55,15 @@ class SettingsDialog(QDialog):
         form.addRow("Descargas a la vez", self.concurrent)
         form.addRow("", self.normalize)
         form.addRow("", self.skip)
+        form.addRow("Letras", self.lyrics)
+        form.addRow("", self.lrc)
 
         note = QLabel(
             "Sobre la calidad: YouTube entrega el audio a ~128-160 kbps (Opus o AAC). "
             "MP3 V0 conserva todo lo que hay con un buen tamaño; 320 kbps no añade calidad real. "
-            "M4A copia el audio AAC original sin recodificar y el iPod lo lee de forma nativa."
+            "M4A copia el audio AAC original sin recodificar y el iPod lo lee de forma nativa.\n\n"
+            "Las letras salen de LRCLIB (lrclib.net), una base de datos de letras gratuita y abierta. "
+            "Si una canción no está, se descarga igual, sin letra."
         )
         note.setObjectName("Muted")
         note.setWordWrap(True)
@@ -92,5 +107,7 @@ class SettingsDialog(QDialog):
         s.audio_format = self.format.currentData()
         s.normalize = self.normalize.isChecked()
         s.skip_downloaded = self.skip.isChecked()
+        s.lyrics = self.lyrics.isChecked()
+        s.lrc_file = self.lrc.isChecked()
         s.concurrent = self.concurrent.value()
         return s

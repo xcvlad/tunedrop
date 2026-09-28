@@ -94,6 +94,9 @@ QCheckBox::indicator {{
     width: 18px; height: 18px; border-radius: 5px; border: 1px solid {BORDER}; background: {CARD};
 }}
 QCheckBox::indicator:checked {{ background: {ACCENT}; border: 1px solid {ACCENT}; }}
+/* Opciones que ahora no se pueden cambiar (p. ej. el .lrc sin letras): en gris. */
+QCheckBox:disabled {{ color: {MUTED}; }}
+QCheckBox::indicator:disabled {{ background: {BG}; border: 1px solid {CARD_HOVER}; }}
 
 QListWidget {{ background: transparent; border: none; outline: none; }}
 QListWidget::item {{ border: none; padding: 0; margin: 0; }}

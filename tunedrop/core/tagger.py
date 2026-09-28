@@ -7,7 +7,7 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-from mutagen.id3 import APIC, COMM, ID3, TALB, TDRC, TIT2, TPE1, TPE2, TRCK, ID3NoHeaderError
+from mutagen.id3 import APIC, COMM, ID3, TALB, TDRC, TIT2, TPE1, TPE2, TRCK, USLT, ID3NoHeaderError
 from mutagen.mp4 import MP4, MP4Cover
 from PIL import Image
 
@@ -23,6 +23,7 @@ class Tags:
     track_number: int | None = None
     year: str | None = None
     comment: str | None = None
+    lyrics: str | None = None  # letra normal (ver lyrics.py); el iPod la muestra
 
 
 def fetch_image(url: str, timeout: float = 15) -> bytes | None:
@@ -92,6 +93,9 @@ def _write_id3(path: Path, tags: Tags, cover: bytes | None) -> None:
         id3.add(TDRC(encoding=1, text=tags.year))
     if tags.comment:
         id3.add(COMM(encoding=1, lang="eng", desc="", text=tags.comment))
+    if tags.lyrics:
+        # USLT es la etiqueta de la letra. Idioma «eng», como hace iTunes: el iPod no lo usa.
+        id3.add(USLT(encoding=1, lang="eng", desc="", text=tags.lyrics))
     if cover:
         id3.add(APIC(encoding=0, mime="image/jpeg", type=3, desc="Cover", data=cover))
     # ID3v2.3 con UTF-16 (encoding=1): lo que mejor leen iPods y reproductores antiguos.
@@ -112,6 +116,8 @@ def _write_mp4(path: Path, tags: Tags, cover: bytes | None) -> None:
         mp4["\xa9day"] = [tags.year]
     if tags.comment:
         mp4["\xa9cmt"] = [tags.comment]
+    if tags.lyrics:
+        mp4["\xa9lyr"] = [tags.lyrics]
     if cover:
         mp4["covr"] = [MP4Cover(cover, imageformat=MP4Cover.FORMAT_JPEG)]
     mp4.save()

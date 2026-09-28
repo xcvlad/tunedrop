@@ -57,6 +57,12 @@ def ejecutar(args: list[str]) -> int:
                 size = result.path.stat().st_size
                 log(f"OK: {result.path.name} ({size / 1e6:.1f} MB, origen {result.source_codec} "
                     f"{result.source_bitrate} kbps)")
+                # La letra es un extra: que no la encuentre no es un error.
+                if result.lyrics:
+                    tipo = "con tiempos" if result.lyrics.synced else "sin tiempos"
+                    log(f"Letra: {len(result.lyrics.plain.splitlines())} líneas ({tipo})")
+                else:
+                    log("Letra: no encontrada (no es un error)")
     except Exception:
         log(traceback.format_exc())
         ok = False
