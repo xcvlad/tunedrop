@@ -31,7 +31,8 @@ tunedrop/
 │   │   ├── search.py         ←     Buscar canciones y leer enlaces/playlists
 │   │   ├── downloader.py     ←     Descarga completa de una canción (orquesta todo)
 │   │   ├── converter.py      ←     Convierte el audio a MP3/M4A con ffmpeg
-│   │   ├── tagger.py         ←     Escribe título, artista, carátula… en el archivo
+│   │   ├── tagger.py         ←     Escribe título, artista, carátula, letra… en el archivo
+│   │   ├── lyrics.py         ←     Busca la letra de la canción en LRCLIB
 │   │   ├── titles.py         ←     Limpia títulos: quita «(Official Video)», etc.
 │   │   ├── paths.py          ←     Nombre de cada archivo: «Artista - Título.mp3»
 │   │   ├── models.py         ←     Qué es una «canción» (Track) y los formatos
@@ -94,8 +95,10 @@ Esto es lo que pasa cuando buscas y descargas una canción:
                             1. yt-dlp descarga el mejor audio ◄───  YouTube
                                (Deno resuelve el JavaScript de YouTube)
                             2. converter.py: ffmpeg lo pasa a MP3
-                            3. tagger.py: pone título, artista, carátula
+                               y, a la vez, lyrics.py busca la letra ◄──  LRCLIB
+                            3. tagger.py: pone título, artista, carátula y letra
                             4. paths.py: lo guarda como «Artista - Título.mp3»
+                               (y, si lo pides, «Artista - Título.lrc» al lado)
  Ves "Listo ✓"       ◄──   workers.py avisa a la ventana
 ```
 
@@ -117,6 +120,16 @@ Aun así, **la conexión es directa**: yt-dlp funciona *dentro* de tunedrop, en 
 - Los iPods y muchos reproductores MP3 **no leen bien** las etiquetas ID3v2.4 (las más nuevas). Por eso usamos la versión 2.3.
 - Los iPods clásicos **no muestran** las carátulas en JPEG «progresivo». Por eso las guardamos en JPEG «baseline», cuadradas y de 600 px.
 - La memoria de un reproductor suele usar el sistema de archivos **FAT32**, que no admite caracteres como `: ? * "`. `paths.py` los sustituye.
+
+### ¿Cómo sabe cuál es la letra buena?
+
+`lyrics.py` pregunta a LRCLIB por el artista y el título. Casi siempre recibe **varias versiones** de la misma canción (la del álbum, un directo, una recortada…), cada una con su duración. Entonces:
+
+1. Se queda con las que duran casi lo mismo que el audio descargado (±3 segundos).
+2. Entre esas, prefiere la que trae letra sincronizada.
+3. Si la más parecida dura más de 10 segundos de diferencia, seguramente es otra versión: guarda el texto, pero no los tiempos, porque no cuadrarían.
+
+La letra se busca **a la vez** que ffmpeg convierte el audio, así que no hace esperar. Y si LRCLIB no responde o no tiene la canción, la canción se descarga igual, sin letra: la letra es un extra y nunca debe estropear una descarga.
 
 ## Glosario
 
@@ -144,6 +157,8 @@ Aun así, **la conexión es directa**: yt-dlp funciona *dentro* de tunedrop, en 
 | **Commit** | Una «foto» guardada del proyecto con un mensaje que explica qué cambió. |
 | **Release** | Una versión publicada en GitHub con archivos descargables (el `.exe`). |
 | **GitHub Actions** | Servidores de GitHub que ejecutan tareas automáticas (tests, compilar). |
+| **Letra sincronizada / `.lrc`** | Una letra en la que cada línea lleva el momento en que se canta, por ejemplo `[00:07.13] Caught in a landslide`. Los reproductores que la entienden la van mostrando a la vez que suena. |
+| **LRCLIB** | Web gratuita y abierta con letras de canciones que sube su comunidad. tunedrop le pregunta por artista, título y duración. |
 | **SHA-256** | «Huella digital» de un archivo. Si cambia un solo byte, la huella es totalmente distinta. |
 
 [Siguiente: cómo se fabrica el programa →](como-se-fabrica.md)
