@@ -17,7 +17,7 @@ from .models import AudioFormat, Track
 from .paths import build_output_path, unique_path
 from .runtime import base_ydl_options
 from .tagger import Tags, fetch_image, prepare_cover, write_tags
-from .titles import clean_channel, split_artist_title
+from .titles import clean_channel, clean_title, split_artist_title
 
 
 class Stage(str, Enum):
@@ -195,7 +195,8 @@ def build_tags(info: dict, track: Track) -> Tags:
     song = info.get("track")
     if artists and song:
         artist = ", ".join(dict.fromkeys(artists))
-        title = song
+        # También puede traer relleno, como «Canción (Remastered 2011)».
+        title = clean_title(song) or song
     else:
         artist, title = split_artist_title(info.get("title") or track.title,
                                            info.get("channel") or track.channel)

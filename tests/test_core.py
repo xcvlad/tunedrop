@@ -13,6 +13,7 @@ from PIL import Image
 from tunedrop.core.converter import build_command
 from tunedrop.core.downloader import build_tags, save_lrc, save_to_destination
 from tunedrop.core.history import History
+from tunedrop.core import updates
 from tunedrop.core.lyrics import pick_best, strip_timestamps
 from tunedrop.core.models import AudioFormat, Track
 from tunedrop.core.paths import build_output_path, sanitize, unique_path
@@ -33,6 +34,38 @@ HAS_FFMPEG = shutil.which("ffmpeg") is not None
     ("Song (Lyrics)", "Song"),
     ("Song - Official Video", "Song"),
     ("Song (feat. Someone)", "Song (feat. Someone)"),
+    # Mezclas de relleno (antes se quedaban)
+    ("Bohemian Rhapsody (Official Video Remastered)", "Bohemian Rhapsody"),
+    ("Song (Official 4K Video)", "Song"),
+    ("Song (Official HD Video) [Remastered 2011]", "Song"),
+    ("Song (2011 Remaster)", "Song"),
+    ("Song (Remasterizado 2015)", "Song"),
+    ("Song (Letra/Lyrics)", "Song"),
+    ("Canción (Video Oficial) (Con Letra)", "Canción"),
+    ("Song 【Official Video】", "Song"),
+    ("Song (Official M/V)", "Song"),
+    ("SONG (OFFICIAL MUSIC VIDEO)", "SONG"),
+    ("Song (Audio)", "Song"),
+    # Coletillas del final
+    ("Song | Official Music Video", "Song"),
+    ("Song - Remastered 2011", "Song"),
+    ("Song // Lyrics", "Song"),
+    ("Song - Remastered 2011 - Official Video", "Song"),
+    # Casos reales de YouTube
+    ("Tití Me Preguntó (La Letra / Lyrics)", "Tití Me Preguntó"),
+    ("Smells Like Teen Spirit (Full Version 4K Remastered 60 FPS)", "Smells Like Teen Spirit"),
+    ("Titi Me Pregunto (Audio/Estudio) 2022", "Titi Me Pregunto 2022"),
+    ("BAD BUNNY-TITI ME PREGUNTO HQ", "BAD BUNNY-TITI ME PREGUNTO"),
+    ("Billie Jean (Live) - 1983", "Billie Jean (Live)"),
+    ("Song (Radio Version)", "Song (Radio Version)"),
+    # Lo que dice algo de la canción se queda
+    ("Song (Live)", "Song (Live)"),
+    ("Song (Remix)", "Song (Remix)"),
+    ("Song (with Justin Bieber)", "Song (with Justin Bieber)"),
+    ("Song (con Rosalía)", "Song (con Rosalía)"),
+    ("Song (Acoustic Version)", "Song (Acoustic Version)"),
+    ("Song - Live at Wembley 1986", "Song - Live at Wembley 1986"),
+    ("Video Killed the Radio Star", "Video Killed the Radio Star"),
 ])
 def test_clean_title(raw, expected):
     assert clean_title(raw) == expected
@@ -142,6 +175,29 @@ def test_build_tags_prefers_music_metadata():
     assert (tags.title, tags.artist, tags.album, tags.year, tags.track_number) == \
         ("Real Song", "X, Y", "LP", "2020", 4)
     assert tags.album_artist == "X"
+
+
+def test_build_tags_cleans_music_track_name():
+    info = {"title": "x", "track": "Bohemian Rhapsody (Remastered 2011)", "artists": ["Queen"]}
+    assert build_tags(info, Track(id="1", url="u", title="t")).title == "Bohemian Rhapsody"
+
+
+def test_split_artist_title_real_example():
+    assert split_artist_title("Queen – Bohemian Rhapsody (Official Video Remastered)") == \
+        ("Queen", "Bohemian Rhapsody")
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("Bad Bunny - Tití Me Preguntó (Official Video) | Un Verano Sin Ti", ("Bad Bunny", "Tití Me Preguntó")),
+    ("SHAKIRA || BZRP Music Sessions #53 (Official Video)", ("SHAKIRA", "BZRP Music Sessions #53")),
+    ("@coldplay - Yellow (Lyrics)", ("coldplay", "Yellow")),
+    ("Daft Punk - Get Lucky (Official Audio) ft. Pharrell Williams", ("Daft Punk", "Get Lucky ft. Pharrell Williams")),
+    ("BTS (방탄소년단) 'Dynamite' Official MV", ("BTS (방탄소년단)", "Dynamite")),
+    ("Numb (Official Music Video) [4K UPGRADE] – Linkin Park", ("Numb", "Linkin Park")),  # al revés: no se puede saber
+    ("Guns N' Roses Patience", ("Canal", "Guns N' Roses Patience")),
+])
+def test_split_artist_title_youtube_cases(raw, expected):
+    assert split_artist_title(raw, "Canal") == expected
 
 
 def test_build_tags_from_video_title():
@@ -260,6 +316,55 @@ def test_save_lrc_next_to_song(tmp_path):
     assert lrc.read_bytes().startswith(b"\xef\xbb\xbf")   # UTF-8 con BOM
     assert lrc.read_text(encoding="utf-8-sig").splitlines() == [
         "[ar:Artista]", "[ti:Canción]", "[al:Disco]", "[00:01.00] Hola"]
+
+
+# --- aviso de versión nueva (sin red: la respuesta de GitHub es inventada) -----
+
+@pytest.mark.parametrize("latest, current, newer", [
+    ("0.4.0", "0.3.0", True),
+    ("0.10.0", "0.9.9", True),     # 10 > 9 (comparar como texto diría lo contrario)
+    ("0.3.0", "0.3.0", False),
+    ("0.2.9", "0.3.0", False),
+    ("1.0", "0.9.9", True),
+])
+def test_is_newer(latest, current, newer):
+    assert updates.is_newer(latest, current) is newer
+
+
+def _github_redirige_a(monkeypatch, url):
+    class Respuesta:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def geturl(self):
+            return url
+
+    monkeypatch.setattr(updates.urllib.request, "urlopen", lambda *a, **k: Respuesta())
+
+
+def test_latest_version_follows_redirect(monkeypatch):
+    _github_redirige_a(monkeypatch, "https://github.com/xcvlad/tunedrop/releases/tag/v0.4.0")
+    assert updates.latest_version() == "0.4.0"
+
+
+def test_latest_version_without_releases(monkeypatch):
+    # Sin versiones publicadas, GitHub se queda en la página de releases.
+    _github_redirige_a(monkeypatch, "https://github.com/xcvlad/tunedrop/releases")
+    assert updates.latest_version() is None
+
+
+def test_latest_version_offline(monkeypatch):
+    def sin_red(*args, **kwargs):
+        raise OSError("sin conexión")
+    monkeypatch.setattr(updates.urllib.request, "urlopen", sin_red)
+    assert updates.latest_version() is None
+
+
+def test_install_kind_from_source():
+    assert updates.install_kind() == "manual"   # los tests se ejecutan desde el código
 
 
 def test_strip_timestamps():
