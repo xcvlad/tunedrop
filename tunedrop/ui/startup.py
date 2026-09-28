@@ -67,6 +67,11 @@ class SingleInstance:
         self.server.newConnection.connect(self._on_new_connection)
         self.server.listen(self.name)
 
+    def close(self) -> None:
+        """Cierra el buzón (al salir de la app)."""
+        if self.server is not None:
+            self.server.close()
+
     def _on_new_connection(self) -> None:
         while self.server.hasPendingConnections():
             self.server.nextPendingConnection().deleteLater()

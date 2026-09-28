@@ -44,6 +44,9 @@ class SettingsDialog(QDialog):
         # El .lrc solo tiene sentido si se buscan las letras.
         self.lrc.setEnabled(settings.lyrics)
         self.lyrics.toggled.connect(self.lrc.setEnabled)
+        self.updates = QCheckBox("Avisar si hay una versión nueva de tunedrop")
+        self.updates.setToolTip("Al abrir la app, pregunta a GitHub cuál es la última versión.")
+        self.updates.setChecked(settings.check_updates)
         self.concurrent = QSpinBox()
         self.concurrent.setRange(1, 6)
         self.concurrent.setValue(settings.concurrent)
@@ -57,6 +60,7 @@ class SettingsDialog(QDialog):
         form.addRow("", self.skip)
         form.addRow("Letras", self.lyrics)
         form.addRow("", self.lrc)
+        form.addRow("Actualizaciones", self.updates)
 
         note = QLabel(
             "Sobre la calidad: YouTube entrega el audio a ~128-160 kbps (Opus o AAC). "
@@ -109,5 +113,6 @@ class SettingsDialog(QDialog):
         s.skip_downloaded = self.skip.isChecked()
         s.lyrics = self.lyrics.isChecked()
         s.lrc_file = self.lrc.isChecked()
+        s.check_updates = self.updates.isChecked()
         s.concurrent = self.concurrent.value()
         return s

@@ -20,6 +20,7 @@ from ..core.runtime import MissingToolError, ffmpeg_path
 from ..core.settings import Settings
 from . import icons, theme
 from .settings_dialog import SettingsDialog
+from .update_banner import UpdateBanner
 from .widgets import QueueCard, ResultCard
 from .workers import DownloadManager, ThumbnailLoader, start_search
 
@@ -85,6 +86,13 @@ class MainWindow(QMainWindow):
         header.addStretch()
         header.addWidget(settings_btn)
         outer.addLayout(header)
+
+        # Aviso de versión nueva (oculto hasta que se sepa que la hay). Se
+        # comprueba a los 3 s, cuando la ventana ya está lista.
+        self.update_banner = UpdateBanner()
+        outer.addWidget(self.update_banner)
+        if self.settings.check_updates:
+            QTimer.singleShot(3000, self.update_banner.start_check)
 
         # Buscador
         self.search = QLineEdit()

@@ -78,7 +78,16 @@ def main() -> int:
     cerrar_pantalla_del_lanzador()
     instancia.window = window
     startup.preload_in_background()
-    return app.exec()
+    codigo = app.exec()
+
+    # Si se pidió «Reiniciar» tras actualizar (Linux), se abre la versión nueva.
+    # Antes se cierra el buzón de la instancia única: si no, la nueva creería
+    # que ya hay una tunedrop abierta y se cerraría.
+    from .ui.update_banner import restart_if_requested
+
+    instancia.close()
+    restart_if_requested()
+    return codigo
 
 
 if __name__ == "__main__":

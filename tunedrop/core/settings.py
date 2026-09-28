@@ -58,6 +58,7 @@ class Settings:
     skip_downloaded: bool = True
     lyrics: bool = True        # añadir la letra de cada canción (core/lyrics.py)
     lrc_file: bool = False     # guardar también un .lrc con la letra sincronizada
+    check_updates: bool = True  # avisar si hay una versión nueva (core/updates.py)
 
     @property
     def format(self) -> AudioFormat:

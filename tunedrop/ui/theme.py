@@ -89,6 +89,12 @@ QComboBox QAbstractItemView {{
     background: {CARD}; border: 1px solid {BORDER}; border-radius: 8px; padding: 4px;
     selection-background-color: {CARD_HOVER}; outline: none;
 }}
+/* Franja «Hay una versión nueva» (ui/update_banner.py) */
+QFrame#UpdateBanner {{
+    background: rgba(139, 92, 246, 0.12); border: 1px solid {ACCENT}; border-radius: 12px;
+}}
+QFrame#UpdateBanner QPushButton#Primary {{ padding: 6px 14px; }}
+
 QCheckBox {{ spacing: 10px; background: transparent; }}
 QCheckBox::indicator {{
     width: 18px; height: 18px; border-radius: 5px; border: 1px solid {BORDER}; background: {CARD};
