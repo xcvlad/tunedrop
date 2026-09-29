@@ -91,7 +91,14 @@ class PreviewPlayer(QObject):
             self._set_state(ERROR, str(result).splitlines()[0][:200])
             self.key = None
             return
-        player = self._ensure_player()
+        try:
+            player = self._ensure_player()
+        except ImportError:
+            # En Linux, el sonido de Qt necesita la librería libpulse del sistema.
+            self._set_state(ERROR, "falta la librería de sonido libpulse. Instálala con "
+                                   "«sudo apt install libpulse0» (o el paquete de tu distribución).")
+            self.key = None
+            return
         player.setSource(QUrl(result))
         player.play()
 
