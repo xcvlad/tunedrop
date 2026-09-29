@@ -33,6 +33,7 @@ tunedrop/
 │   │   ├── converter.py      ←     Convierte el audio a MP3/M4A con ffmpeg
 │   │   ├── tagger.py         ←     Escribe título, artista, carátula, letra… en el archivo
 │   │   ├── lyrics.py         ←     Busca la letra de la canción en LRCLIB
+│   │   ├── musicbrainz.py    ←     Busca el álbum original y su portada en MusicBrainz
 │   │   ├── preview.py        ←     Consigue la dirección del audio para escucharlo
 │   │   ├── titles.py         ←     Limpia títulos: quita «(Official Video)», etc.
 │   │   ├── paths.py          ←     Nombre de cada archivo: «Artista - Título.mp3»
@@ -106,7 +107,8 @@ Esto es lo que pasa cuando buscas y descargas una canción:
                                (Deno resuelve el JavaScript de YouTube)
                             2. converter.py: ffmpeg lo pasa a MP3
                                y, a la vez, lyrics.py busca la letra ◄──  LRCLIB
-                            3. tagger.py: pone título, artista, carátula y letra
+                               y musicbrainz.py, el álbum y su portada ◄──  MusicBrainz
+                            3. tagger.py: pone título, artista, álbum, portada y letra
                             4. paths.py: lo guarda como «Artista - Título.mp3»
                                (y, si lo pides, «Artista - Título.lrc» al lado)
  Ves "Listo ✓"       ◄──   workers.py avisa a la ventana
@@ -141,6 +143,20 @@ Aun así, **la conexión es directa**: yt-dlp funciona *dentro* de tunedrop, en 
 
 La letra se busca **a la vez** que ffmpeg convierte el audio, así que no hace esperar. Y si LRCLIB no responde o no tiene la canción, la canción se descarga igual, sin letra: la letra es un extra y nunca debe estropear una descarga.
 
+### ¿Cómo encuentra el álbum original?
+
+`musicbrainz.py` pregunta a [MusicBrainz](https://musicbrainz.org), la gran base de datos musical abierta, en qué discos sale la canción. Una canción famosa sale en cientos (el álbum, reediciones, recopilatorios, directos…), así que hay que elegir con cuidado:
+
+1. Solo **álbumes oficiales**: fuera recopilatorios, directos, bandas sonoras, remezclas y discos piratas.
+2. Tiene que ser **la misma canción**: mismo título y misma duración (±10 segundos).
+3. Si el título dice que es un directo o una remezcla, **ni se busca**: no se le pondría la portada del disco de estudio.
+4. De los que quedan, **el disco donde salió primero**. *Billie Jean* aparece como extra en reediciones de *Bad* (1987), pero salió antes en *Thriller* (1982).
+5. Si el álbum es **más antiguo que la grabación**, esa grabación es un extra añadido en una reedición (un directo en una edición de lujo, por ejemplo): no es su álbum.
+
+El año es el de la **primera edición** del disco, y la portada sale de su archivo de carátulas, [Cover Art Archive](https://coverartarchive.org). El número de pista no se toma de aquí, porque cambia en cada edición. Si hay dudas o MusicBrainz no responde, la canción se queda con los datos del vídeo: mejor nada que un disco equivocado.
+
+MusicBrainz solo acepta una consulta por segundo desde el mismo ordenador, así que, si se descargan varias canciones a la vez, las consultas esperan su turno.
+
 ### ¿Cómo sabe si hay una versión nueva?
 
 Al abrirse, `updates.py` pide a GitHub la página `releases/latest`, que siempre **redirige** a la última versión publicada (por ejemplo, `.../releases/tag/v0.4.0`), y se queda con el final. No usa la API de GitHub, que solo deja hacer 60 consultas por hora desde la misma red.
@@ -174,6 +190,7 @@ Si hay una más nueva, `update_banner.py` muestra el aviso. Actualizar es lo mis
 | **Release** | Una versión publicada en GitHub con archivos descargables (el `.exe`). |
 | **GitHub Actions** | Servidores de GitHub que ejecutan tareas automáticas (tests, compilar). |
 | **Letra sincronizada / `.lrc`** | Una letra en la que cada línea lleva el momento en que se canta, por ejemplo `[00:07.13] Caught in a landslide`. Los reproductores que la entienden la van mostrando a la vez que suena. |
+| **MusicBrainz** | Base de datos musical abierta, mantenida por su comunidad: artistas, discos, canciones y sus ediciones. |
 | **Reproducir «en streaming»** | Escuchar un audio mientras llega por internet, sin descargarlo antes entero. Es lo que hace el ▶: el reproductor de Qt va recibiendo el audio de YouTube y lo reproduce a la vez. |
 | **LRCLIB** | Web gratuita y abierta con letras de canciones que sube su comunidad. tunedrop le pregunta por artista, título y duración. |
 | **SHA-256** | «Huella digital» de un archivo. Si cambia un solo byte, la huella es totalmente distinta. |

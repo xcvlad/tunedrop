@@ -29,7 +29,7 @@
 - ⬇ **Descarga** todas de una vez, con varias en paralelo y el progreso de cada una.
 - 🎵 **Archivos listos para reproductores e iPods**:
   - Etiquetas de título, artista, álbum y año.
-  - Carátula incrustada.
+  - **El álbum original y su portada**: busca en qué disco salió la canción (por ejemplo, *Thriller*, 1982) y le pone la portada de ese disco, en vez de un fotograma del vídeo.
   - **La letra de cada canción**, dentro del archivo: el iPod la muestra al pulsar el botón central. Si tu reproductor lo admite, también puede guardar un `.lrc` con la letra sincronizada, que va apareciendo a la vez que suena.
   - Todas las canciones juntas en una carpeta, con nombres ordenados: `Artista - Título.mp3`.
   - Títulos limpios, sin «(Official Video)», «(Lyrics)», «(Remastered 2011)» y demás relleno, pero conservando «(feat. …)», «(Live)» o «(Remix)».
@@ -168,7 +168,7 @@ Para pasar los tests: `.venv\Scripts\python -m pytest` (Linux: `.venv/bin/python
 - **Todo el código es abierto**: está en este repositorio y cualquiera puede leerlo.
 - **El programa no se compila en el ordenador de nadie**: lo compila GitHub Actions a partir de este código, con el script [`packaging/build.py`](packaging/build.py). El registro completo de cada compilación es público en la pestaña **Actions**.
 - **Cada descarga se puede verificar**: las Releases incluyen `SHA256SUMS.txt` y un certificado de procedencia (*attestation*) que demuestra que el archivo salió de este repositorio. Cómo se comprueba: [ver guía](docs/como-se-fabrica.md#comprobar-una-descarga).
-- **Sin servidores intermedios, anuncios ni telemetría**: la app se conecta directamente desde tu ordenador a YouTube o a la web que elijas. Para las letras consulta además [LRCLIB](https://lrclib.net), una base de datos de letras gratuita y abierta, a la que solo envía el artista, el título y la duración de la canción. Se puede desactivar en *Ajustes → Letras*. Y, al abrirse, pregunta a GitHub cuál es la última versión de tunedrop, para avisarte si hay una nueva (también se puede desactivar en *Ajustes*). No envía datos a ningún otro sitio.
+- **Sin servidores intermedios, anuncios ni telemetría**: la app se conecta directamente desde tu ordenador a YouTube o a la web que elijas. Para el álbum y las letras consulta además dos bases de datos gratuitas y abiertas, [MusicBrainz](https://musicbrainz.org) (y su archivo de portadas, [Cover Art Archive](https://coverartarchive.org)) y [LRCLIB](https://lrclib.net), a las que solo envía el artista, el título y la duración de la canción. Se pueden desactivar en *Ajustes*. Y, al abrirse, pregunta a GitHub cuál es la última versión de tunedrop, para avisarte si hay una nueva (también se puede desactivar en *Ajustes*). No envía datos a ningún otro sitio.
 
 ## Sobre la calidad del audio
 
@@ -189,6 +189,7 @@ YouTube guarda el audio a unos **128-160 kbps** (formatos Opus o AAC). Convertir
 | [ffmpeg](https://ffmpeg.org/) ([compilación LGPL](https://github.com/BtbN/FFmpeg-Builds)) | Conversión a MP3 | LGPL-2.1+ |
 | [mutagen](https://github.com/quodlibet/mutagen) | Etiquetas y carátula | GPL-2.0+ |
 | [Pillow](https://python-pillow.org/) | Preparar la carátula | MIT-CMU |
+| [MusicBrainz](https://musicbrainz.org/) · [Cover Art Archive](https://coverartarchive.org/) | El álbum original, su año y su portada (servicio web) | Datos CC0 · portadas de su comunidad |
 | [LRCLIB](https://lrclib.net/) | Las letras de las canciones (servicio web, no va dentro del programa) | Letras de su comunidad |
 | [PyInstaller](https://pyinstaller.org/) · [Inno Setup](https://jrsoftware.org/isinfo.php) | Crear el programa y el instalador de Windows | GPL con excepción · propia |
 | [Nix](https://nixos.org/) | Crear el paquete de NixOS | LGPL-2.1 |
