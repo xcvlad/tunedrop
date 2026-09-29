@@ -1,4 +1,4 @@
-"""Descarga completa de una canción: audio, conversión, etiquetas, carátula y letra, en la carpeta de música."""
+"""Descarga completa de una canción: audio, conversión, etiquetas, álbum, carátula y letra, en la carpeta de música."""
 
 from __future__ import annotations
 
@@ -6,13 +6,14 @@ import shutil
 import tempfile
 import threading
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
 from .converter import convert
 from .lyrics import Lyrics, find_lyrics
+from .musicbrainz import AlbumInfo, find_album
 from .models import AudioFormat, Track
 from .paths import build_output_path, unique_path
 from .runtime import base_ydl_options
@@ -47,6 +48,7 @@ class DownloadOptions:
     normalize: bool = False
     lyrics: bool = True       # buscar la letra y guardarla dentro de la canción
     lrc_file: bool = False    # guardar además un .lrc con la letra sincronizada
+    album_info: bool = True   # buscar el álbum original y su portada (musicbrainz.py)
 
 
 @dataclass
@@ -55,6 +57,7 @@ class DownloadResult:
     source_bitrate: float | None  # kbps reales del audio original
     source_codec: str | None
     lyrics: Lyrics | None = None  # la letra encontrada (None si no hay o está desactivado)
+    album: AlbumInfo | None = None  # el álbum original encontrado (ídem)
 
 
 def audio_selector(fmt: AudioFormat) -> str:
@@ -118,14 +121,14 @@ def download_track(
             extension=options.audio_format.extension,
         ))
 
-        # La letra se busca en otro hilo mientras ffmpeg convierte: así no hay que
-        # esperarla. Se busca con el primer artista (no «A, B»), que es como está en LRCLIB.
-        busqueda_letra = None
-        if options.lyrics:
-            hilo_letra = ThreadPoolExecutor(max_workers=1)
-            busqueda_letra = hilo_letra.submit(
-                find_lyrics, tags.album_artist or tags.artist, tags.title, info.get("duration"))
-            hilo_letra.shutdown(wait=False)   # el hilo se cierra solo al terminar la búsqueda
+        # La letra y el álbum se buscan en otros hilos mientras ffmpeg convierte: así
+        # no hay que esperarlos. Se buscan con el primer artista (no «A, B»), que es
+        # como están en LRCLIB y en MusicBrainz.
+        artista, duracion = tags.album_artist or tags.artist, info.get("duration")
+        busqueda_letra = (_en_segundo_plano(find_lyrics, artista, tags.title, duracion)
+                          if options.lyrics else None)
+        busqueda_album = (_en_segundo_plano(_album_y_portada, artista, tags.title, duracion)
+                          if options.album_info else None)
 
         fmt = options.audio_format
         progress(Stage.CONVERTING, 1.0, "")
@@ -135,22 +138,21 @@ def download_track(
         check_cancel()
 
         progress(Stage.TAGGING, 1.0, "")
-        cover = _best_cover(info)
-        lyrics = None
-        if busqueda_letra:
-            try:
-                lyrics = busqueda_letra.result()
-            except Exception:
-                pass   # sin letra: nunca debe estropear la descarga
+        lyrics = _resultado(busqueda_letra)
         if lyrics:
             tags.lyrics = lyrics.plain
+        album, cover = _resultado(busqueda_album) or (None, None)
+        if album:
+            apply_album(tags, album)
+        # La portada del disco si la hay; si no, la miniatura del vídeo.
+        cover = cover or _best_cover(info)
         write_tags(temp_out, tags, cover)
 
         save_to_destination(temp_out, target)
         if lyrics and lyrics.synced and options.lrc_file:
             save_lrc(target, tags, lyrics.synced)
         progress(Stage.DONE, 1.0, "")
-        return DownloadResult(target, info.get("abr"), info.get("acodec"), lyrics)
+        return DownloadResult(target, info.get("abr"), info.get("acodec"), lyrics, album)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
 
@@ -170,6 +172,55 @@ def save_to_destination(temp_file: Path, target: Path) -> None:
     except BaseException:
         target.unlink(missing_ok=True)  # no dejar una canción a medias
         raise
+
+
+def _en_segundo_plano(funcion, *args) -> Future:
+    """Ejecuta una función en otro hilo; su resultado se recoge luego con _resultado."""
+    hilo = ThreadPoolExecutor(max_workers=1)
+    futuro = hilo.submit(funcion, *args)
+    hilo.shutdown(wait=False)   # el hilo se cierra solo al terminar
+    return futuro
+
+
+def _resultado(futuro: Future | None):
+    """El resultado de _en_segundo_plano, o None si falló: la letra y el álbum son
+    extras y nunca deben estropear la descarga."""
+    if futuro is None:
+        return None
+    try:
+        return futuro.result()
+    except Exception:
+        return None
+
+
+def _album_y_portada(artist: str, title: str, duration: float | None) -> tuple[AlbumInfo, bytes | None] | None:
+    """El álbum original (musicbrainz.py) y su portada, ya preparada para el iPod."""
+    album = find_album(artist, title, duration)
+    if not album:
+        return None
+    portada = None
+    datos = fetch_image(album.cover_url, timeout=20)
+    if datos:
+        try:
+            portada = prepare_cover(datos)
+        except Exception:
+            portada = None        # imagen rota: se usará la miniatura del vídeo
+    return album, portada
+
+
+def apply_album(tags: Tags, album: AlbumInfo) -> None:
+    """Pone en las etiquetas el álbum original y su año.
+
+    El artista del álbum NO se cambia: MusicBrainz a veces lo escribe con otros
+    caracteres («a‐ha» con un guion especial) y el iPod lo trataría como otro artista.
+    """
+    if tags.album and tags.album.casefold() != album.album.casefold():
+        # YouTube Music daba otro disco (p. ej. un recopilatorio): su número de
+        # pista era de ese disco, no de este.
+        tags.track_number = None
+    tags.album = album.album
+    if album.year:
+        tags.year = album.year
 
 
 def save_lrc(song: Path, tags: Tags, synced: str) -> Path:
@@ -213,15 +264,18 @@ def build_tags(info: dict, track: Track) -> Tags:
     )
 
 
-def _best_cover(info: dict) -> bytes | None:
+def _best_cover(info: dict, intentos: int = 10) -> bytes | None:
+    """La miniatura del vídeo, como portada de reserva.
+
+    yt-dlp lista muchas miniaturas posibles, pero no todas existen: los vídeos
+    antiguos no tienen las más grandes (maxresdefault, hq720) y dan error 404.
+    Se prueban de mejor a peor hasta que una funcione. Pillow lee también .webp.
+    """
     thumbs = [t for t in info.get("thumbnails") or [] if t.get("url")]
     # yt-dlp las ordena de peor a mejor según su preferencia.
     thumbs.sort(key=lambda t: (t.get("preference") or 0, t.get("width") or 0))
-    for thumb in reversed(thumbs[-4:]):
-        url = thumb["url"]
-        if url.endswith(".webp") and "i.ytimg.com" in url:
-            url = url.replace("/vi_webp/", "/vi/").replace(".webp", ".jpg")
-        data = fetch_image(url)
+    for thumb in list(reversed(thumbs))[:intentos]:
+        data = fetch_image(thumb["url"])
         if data:
             try:
                 return prepare_cover(data)

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QSpinBox, QVBoxLayout,
+    QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
+    QLineEdit, QPushButton, QSpinBox, QVBoxLayout,
 )
 
 from .. import __version__
@@ -44,6 +44,10 @@ class SettingsDialog(QDialog):
         # El .lrc solo tiene sentido si se buscan las letras.
         self.lrc.setEnabled(settings.lyrics)
         self.lyrics.toggled.connect(self.lrc.setEnabled)
+        self.album = QCheckBox("Buscar el álbum original y la portada del disco")
+        self.album.setToolTip("Nombre del álbum, año de la primera edición y portada, de MusicBrainz.\n"
+                              "Si no lo encuentra, se usan los datos del vídeo.")
+        self.album.setChecked(settings.album_info)
         self.updates = QCheckBox("Avisar si hay una versión nueva de tunedrop")
         self.updates.setToolTip("Al abrir la app, pregunta a GitHub cuál es la última versión.")
         self.updates.setChecked(settings.check_updates)
@@ -58,6 +62,7 @@ class SettingsDialog(QDialog):
         form.addRow("Descargas a la vez", self.concurrent)
         form.addRow("", self.normalize)
         form.addRow("", self.skip)
+        form.addRow("Álbum", self.album)
         form.addRow("Letras", self.lyrics)
         form.addRow("", self.lrc)
         form.addRow("Actualizaciones", self.updates)
@@ -66,8 +71,9 @@ class SettingsDialog(QDialog):
             "Sobre la calidad: YouTube entrega el audio a ~128-160 kbps (Opus o AAC). "
             "MP3 V0 conserva todo lo que hay con un buen tamaño; 320 kbps no añade calidad real. "
             "M4A copia el audio AAC original sin recodificar y el iPod lo lee de forma nativa.\n\n"
-            "Las letras salen de LRCLIB (lrclib.net), una base de datos de letras gratuita y abierta. "
-            "Si una canción no está, se descarga igual, sin letra."
+            "El álbum y la portada salen de MusicBrainz (musicbrainz.org) y las letras de LRCLIB "
+            "(lrclib.net), dos bases de datos gratuitas y abiertas. Si una canción no está, "
+            "se descarga igual, con los datos del vídeo."
         )
         note.setObjectName("Muted")
         note.setWordWrap(True)
@@ -99,6 +105,10 @@ class SettingsDialog(QDialog):
         layout.addWidget(note)
         layout.addStretch()
         layout.addLayout(buttons)
+        # Al abrir una ventana, Qt la limita a 2/3 del alto de la pantalla; en
+        # pantallas pequeñas (portátiles de 768 px) aplastaba los campos de arriba.
+        # Así nunca es más baja de lo que necesita su contenido.
+        self.setMinimumHeight(self.sizeHint().height())
 
     def _browse(self):
         path = QFileDialog.getExistingDirectory(self, "Carpeta de música", self.folder.text())
@@ -114,5 +124,6 @@ class SettingsDialog(QDialog):
         s.lyrics = self.lyrics.isChecked()
         s.lrc_file = self.lrc.isChecked()
         s.check_updates = self.updates.isChecked()
+        s.album_info = self.album.isChecked()
         s.concurrent = self.concurrent.value()
         return s

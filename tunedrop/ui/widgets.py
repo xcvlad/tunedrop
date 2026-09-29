@@ -308,6 +308,7 @@ class QueueCard(QWidget):
         self.bar.show()
         label = self.stage.value + (f" · {quality}" if quality else "")
         self.status.setText(label)
+        self.status.setToolTip(label)   # si no cabe, al pasar el ratón se ve entero
         self.status.setStyleSheet(f"color: {theme.SUCCESS};")
         self.action.setIcon(icons.icon("folder", 16, theme.TEXT))
         self.action.setToolTip("Mostrar en la carpeta")

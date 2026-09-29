@@ -402,6 +402,7 @@ class MainWindow(QMainWindow):
             normalize=self.settings.normalize,
             lyrics=self.settings.lyrics,
             lrc_file=self.settings.lyrics and self.settings.lrc_file,
+            album_info=self.settings.album_info,
         )
         for key in keys:
             card = self._queue_cards.get(key)

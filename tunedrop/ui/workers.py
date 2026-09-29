@@ -102,13 +102,18 @@ class _DownloadJob(QRunnable):
                     self.key, stage.value, frac, extra),
                 self.cancel,
             )
-            # Texto que sale en la tarjeta al terminar: «Origen OPUS 135 kbps · ♪ Con letra».
+            # Texto que sale en la tarjeta al terminar, de lo más útil a lo menos (si
+            # no cabe, se corta por el final; al pasar el ratón se ve entero):
+            # «◉ Thriller (1982) · ♪ Con letra · Origen OPUS 135 kbps».
             partes = []
+            if result.album:
+                anio = f" ({result.album.year})" if result.album.year else ""
+                partes.append(f"◉ {result.album.album}{anio}")
+            if self.options.lyrics:
+                partes.append("♪ Con letra" if result.lyrics else "Sin letra")
             if result.source_bitrate:
                 codec = (result.source_codec or "").split(".")[0].replace("mp4a", "AAC").upper()
                 partes.append(f"Origen {codec} {round(result.source_bitrate)} kbps")
-            if self.options.lyrics:
-                partes.append("♪ Con letra" if result.lyrics else "Sin letra")
             self.signals.finished.emit(self.key, str(result.path), " · ".join(partes))
         except Cancelled:
             self.signals.cancelled.emit(self.key)

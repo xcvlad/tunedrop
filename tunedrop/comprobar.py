@@ -81,6 +81,10 @@ def ejecutar(args: list[str]) -> int:
                     log(f"Letra: {len(result.lyrics.plain.splitlines())} líneas ({tipo})")
                 else:
                     log("Letra: no encontrada (no es un error)")
+                if result.album:
+                    log(f"Álbum: {result.album.album} ({result.album.year or 'sin año'})")
+                else:
+                    log("Álbum: no encontrado en MusicBrainz (no es un error)")
     except Exception:
         log(traceback.format_exc())
         ok = False

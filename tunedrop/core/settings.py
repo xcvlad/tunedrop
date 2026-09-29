@@ -58,6 +58,7 @@ class Settings:
     skip_downloaded: bool = True
     lyrics: bool = True        # añadir la letra de cada canción (core/lyrics.py)
     lrc_file: bool = False     # guardar también un .lrc con la letra sincronizada
+    album_info: bool = True    # álbum original, año y portada del disco (core/musicbrainz.py)
     check_updates: bool = True  # avisar si hay una versión nueva (core/updates.py)
 
     @property

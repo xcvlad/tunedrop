@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import ssl
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,10 +27,23 @@ class Tags:
     lyrics: str | None = None  # letra normal (ver lyrics.py); el iPod la muestra
 
 
+def _contexto_ssl() -> ssl.SSLContext:
+    """Comprobación normal de certificados (válido, de quien dice ser, sin caducar),
+    pero sin la regla extra «estricta» que Python aplica desde la 3.13.
+
+    Algunos servidores de archive.org, de donde salen las portadas de los discos,
+    tienen un certificado que no cumple un detalle de esa regla y Python 3.13+
+    rechazaría la conexión. curl y los navegadores no aplican esa regla.
+    """
+    contexto = ssl.create_default_context()
+    contexto.verify_flags &= ~getattr(ssl, "VERIFY_X509_STRICT", 0)
+    return contexto
+
+
 def fetch_image(url: str, timeout: float = 15) -> bytes | None:
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=_contexto_ssl()) as resp:
             return resp.read()
     except Exception:
         return None

@@ -11,9 +11,10 @@ from mutagen.mp4 import MP4
 from PIL import Image
 
 from tunedrop.core.converter import build_command
-from tunedrop.core.downloader import build_tags, save_lrc, save_to_destination
+from tunedrop.core.downloader import apply_album, build_tags, save_lrc, save_to_destination
 from tunedrop.core.history import History
-from tunedrop.core import updates
+from tunedrop.core import musicbrainz, updates
+from tunedrop.core.musicbrainz import pick_release_group
 from tunedrop.core.lyrics import pick_best, strip_timestamps
 from tunedrop.core.models import AudioFormat, Track
 from tunedrop.core.paths import build_output_path, sanitize, unique_path
@@ -325,6 +326,92 @@ def test_save_lrc_next_to_song(tmp_path):
     assert lrc.read_bytes().startswith(b"\xef\xbb\xbf")   # UTF-8 con BOM
     assert lrc.read_text(encoding="utf-8-sig").splitlines() == [
         "[ar:Artista]", "[ti:Canción]", "[al:Disco]", "[00:01.00] Hola"]
+
+
+# --- álbum original (sin red: resultados de MusicBrainz inventados) ------------
+
+def _grabacion(titulo, ms, ediciones, estreno="1982", score=100, artista="Michael Jackson"):
+    """Una grabación de MusicBrainz. ediciones: (álbum, id_grupo, fecha, tipos secundarios, estado)."""
+    return {
+        "title": titulo, "length": ms, "score": score, "first-release-date": estreno,
+        "artist-credit": [{"name": artista}],
+        "releases": [
+            {"title": album, "date": fecha, "status": estado,
+             "release-group": {"id": gid, "title": album, "primary-type": "Album",
+                               "secondary-types": secundarios}}
+            for album, gid, fecha, secundarios, estado in ediciones
+        ],
+    }
+
+
+def test_musicbrainz_picks_first_album():
+    # Billie Jean sale como extra en una reedición de «Bad»: el original es «Thriller».
+    grabaciones = [_grabacion("Billie Jean", 294000, [
+        ("Bad", "bad", "2001", [], "Official"),
+        ("Thriller", "thriller", "1982-11-30", [], "Official"),
+        ("Thriller", "thriller", "2008", [], "Official"),
+    ])]
+    assert pick_release_group(grabaciones, "Billie Jean", 294)[:3] == ("thriller", "Thriller", "Michael Jackson")
+
+
+def test_musicbrainz_skips_live_compilations_and_bootlegs():
+    grabaciones = [_grabacion("Billie Jean", 294000, [
+        ("Greatest Hits", "hits", "1980", ["Compilation"], "Official"),
+        ("En directo", "live", "1981", ["Live"], "Official"),
+        ("Pirata", "pirata", "1979", [], "Bootleg"),
+        ("Thriller", "thriller", "1982", [], "Official"),
+    ])]
+    assert pick_release_group(grabaciones, "Billie Jean", 294)[0] == "thriller"
+
+
+def test_musicbrainz_requires_same_song_and_duration():
+    otra = [_grabacion("Billie Jean (Remix)", 294000, [("Remixes", "rmx", "1990", [], "Official")])]
+    assert pick_release_group(otra, "Billie Jean", 294)[0] == "rmx"          # sin paréntesis es el mismo título
+    distinta = [_grabacion("Billie Jeans", 294000, [("Otro", "otro", "1990", [], "Official")])]
+    assert pick_release_group(distinta, "Billie Jean", 294) is None           # otra canción
+    larga = [_grabacion("Billie Jean", 360000, [("Otro", "otro", "1990", [], "Official")])]
+    assert pick_release_group(larga, "Billie Jean", 294) is None              # 66 s más: otra versión
+    dudosa = [_grabacion("Billie Jean", 294000, [("Otro", "otro", "1990", [], "Official")], score=60)]
+    assert pick_release_group(dudosa, "Billie Jean", 294) is None             # MusicBrainz no está seguro
+
+
+def test_musicbrainz_skips_live_titles_without_asking(monkeypatch):
+    def no_deberia_preguntar(*args, **kwargs):
+        raise AssertionError("no debería consultar MusicBrainz")
+    monkeypatch.setattr(musicbrainz, "_consultar", no_deberia_preguntar)
+    assert musicbrainz.find_album("Queen", "Bohemian Rhapsody (Live Aid 1985)", 360) is None
+
+
+def test_musicbrainz_rejects_album_older_than_recording(monkeypatch):
+    # Un directo de 2013 añadido a la reedición de un álbum de 1993: no es su álbum.
+    respuestas = iter([
+        {"recordings": [_grabacion("Smells Like Teen Spirit", 301000,
+                                   [("In Utero", "utero", "2013", [], "Official")], estreno="2013",
+                                   artista="Nirvana")]},
+        {"first-release-date": "1993-09-13"},
+    ])
+    monkeypatch.setattr(musicbrainz, "_consultar", lambda *a, **k: next(respuestas))
+    assert musicbrainz.find_album("Nirvana", "Smells Like Teen Spirit", 301) is None
+
+
+def test_musicbrainz_does_not_guess_when_offline(monkeypatch):
+    monkeypatch.setattr(musicbrainz, "_consultar", lambda *a, **k: None)
+    assert musicbrainz.find_album("Queen", "Bohemian Rhapsody", 355) is None
+
+
+def test_apply_album_sets_album_and_original_year():
+    tags = Tags(title="Billie Jean", artist="Michael Jackson", year="2009")
+    apply_album(tags, musicbrainz.AlbumInfo("Thriller", "Michael Jackson", "1982", "id"))
+    assert (tags.album, tags.year, tags.album_artist) == ("Thriller", "1982", None)
+
+
+def test_apply_album_keeps_track_number_only_if_same_album():
+    mismo = Tags(title="T", artist="A", album="thriller", track_number=6)
+    apply_album(mismo, musicbrainz.AlbumInfo("Thriller", "A", "1982", "id"))
+    assert mismo.track_number == 6
+    otro = Tags(title="T", artist="A", album="Number Ones", track_number=3)   # un recopilatorio
+    apply_album(otro, musicbrainz.AlbumInfo("Thriller", "A", "1982", "id"))
+    assert (otro.album, otro.track_number) == ("Thriller", None)
 
 
 # --- aviso de versión nueva (sin red: la respuesta de GitHub es inventada) -----
