@@ -43,6 +43,18 @@ def ejecutar(args: list[str]) -> int:
             log("deno: NO encontrado")
             ok = False
 
+        # El reproductor de «escuchar antes de descargar» (el módulo de sonido de
+        # Qt, con su propio ffmpeg). No necesita altavoces: solo se pregunta si
+        # sabe abrir audio AAC, que es el que da YouTube.
+        from PySide6.QtCore import QCoreApplication
+        from PySide6.QtMultimedia import QMediaFormat
+
+        _app = QCoreApplication.instance() or QCoreApplication(sys.argv[:1])
+        decodificar = QMediaFormat.ConversionMode.Decode
+        tiene_aac = QMediaFormat.AudioCodec.AAC in QMediaFormat().supportedAudioCodecs(decodificar)
+        log(f"reproductor para escuchar: {'sí' if tiene_aac else 'NO'} (abre audio AAC)")
+        ok &= tiene_aac
+
         if args:
             from .core.downloader import DownloadOptions, download_track
             from .core.models import AudioFormat

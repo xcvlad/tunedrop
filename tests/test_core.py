@@ -17,7 +17,7 @@ from tunedrop.core import updates
 from tunedrop.core.lyrics import pick_best, strip_timestamps
 from tunedrop.core.models import AudioFormat, Track
 from tunedrop.core.paths import build_output_path, sanitize, unique_path
-from tunedrop.core.search import entry_to_track, is_url
+from tunedrop.core.search import _friendly, entry_to_track, is_url
 from tunedrop.core.settings import Settings, _linux_music_dir
 from tunedrop.core.tagger import Tags, prepare_cover, write_tags
 from tunedrop.core.titles import clean_channel, clean_title, split_artist_title
@@ -155,6 +155,15 @@ def test_is_url():
     assert is_url("https://www.youtube.com/watch?v=abc")
     assert is_url("www.youtube.com/watch?v=abc")
     assert not is_url("daft punk one more time")
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("\x1b[0;31mERROR:\x1b[0m [youtube] xxxxxxxxxxx: This video is unavailable", "Ese vídeo no está disponible."),
+    ("ERROR: [generic] Unsupported URL: https://example.com", "Ese enlace no es compatible."),
+    ("ERROR: [youtube] abc123DEF45: Sign in to confirm your age", "Sign in to confirm your age"),
+])
+def test_friendly_error_messages(raw, expected):
+    assert _friendly(raw) == expected
 
 
 def test_entry_to_track_youtube_flat():

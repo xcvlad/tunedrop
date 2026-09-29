@@ -22,6 +22,10 @@ _PATHS = {
     "retry": '<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M8 16H3v5"/>',
     "link": '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     "list-plus": '<path d="M11 12H3M16 6H3M16 18H3M18 9v6M21 12h-6"/>',
+    # Escucha previa. «{c}» se cambia por el color: ▶ y ■ van rellenos, no solo con línea.
+    "play": '<path d="M8 5.5v13l10.5-6.5z" fill="{c}"/>',
+    "stop": '<rect x="6.5" y="6.5" width="11" height="11" rx="2" fill="{c}"/>',
+    "loader": '<path d="M21 12a9 9 0 1 1-6.2-8.56"/>',
 }
 
 
@@ -29,7 +33,7 @@ def _svg(name: str, color: str, stroke: float) -> bytes:
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
         f'stroke="{color}" stroke-width="{stroke}" stroke-linecap="round" '
-        f'stroke-linejoin="round">{_PATHS[name]}</svg>'
+        f'stroke-linejoin="round">{_PATHS[name].replace("{c}", color)}</svg>'
     ).encode()
 
 

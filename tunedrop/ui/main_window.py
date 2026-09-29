@@ -20,6 +20,7 @@ from ..core.runtime import MissingToolError, ffmpeg_path
 from ..core.settings import Settings
 from . import icons, theme
 from .settings_dialog import SettingsDialog
+from .preview_player import PreviewPlayer
 from .update_banner import UpdateBanner
 from .widgets import QueueCard, ResultCard
 from .workers import DownloadManager, ThumbnailLoader, start_search
@@ -47,6 +48,11 @@ class MainWindow(QMainWindow):
         self.downloads.finished.connect(self._on_finished)
         self.downloads.failed.connect(self._on_failed)
         self.downloads.cancelled.connect(self._on_cancelled)
+
+        # Escuchar antes de descargar (el ▶ de cada resultado)
+        self.preview = PreviewPlayer(self)
+        self.preview.state_changed.connect(self._on_preview_state)
+        self.preview.progress.connect(self._on_preview_progress)
 
         self._search_token = 0
         self._last_clipboard = ""
@@ -258,6 +264,7 @@ class MainWindow(QMainWindow):
         if token != self._search_token:
             return
         self._reset_search_button()
+        self.preview.stop()   # la canción que sonaba desaparece de la lista
         self.results.clear()
         self._result_cards.clear()
         if not tracks:
@@ -267,6 +274,7 @@ class MainWindow(QMainWindow):
             card = ResultCard(track)
             card.toggled.connect(self._toggle_track)
             key = track_key(track)
+            card.play_requested.connect(lambda t, k=key: self.preview.toggle(k, t))
             card.set_added(key in self._queue_cards)
             card.set_downloaded(self.history.contains(track.source, track.id))
             item = QListWidgetItem(self.results)
@@ -524,6 +532,20 @@ class MainWindow(QMainWindow):
             if answer != QMessageBox.Yes:
                 event.ignore()
                 return
+        self.preview.stop()
         self.downloads.cancel_all()
         self.downloads.wait(3000)
         event.accept()
+
+    # Escuchar antes de descargar
+    def _on_preview_state(self, key: str, state: str, message: str):
+        card = self._result_cards.get(key)
+        if card:
+            card.set_preview_state(state)
+        if state == "error":
+            self._show_toast(f"No se pudo escuchar: {message}", 4500)
+
+    def _on_preview_progress(self, key: str, position: int, duration: int):
+        card = self._result_cards.get(key)
+        if card:
+            card.set_preview_progress(position, duration)

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPainterPath, QPixmap
+from PySide6.QtCore import QPointF, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPixmap
 from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QProgressBar, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
@@ -55,12 +55,20 @@ def _elide(label: QLabel, text: str) -> None:
     label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
 
 
-class ResultCard(QWidget):
-    """Una canción encontrada, con botón para añadirla o quitarla de la lista."""
+def _mm_ss(ms: int) -> str:
+    s = max(ms, 0) // 1000
+    return f"{s // 60}:{s % 60:02d}"
 
-    toggled = Signal(object)  # Track
+
+class ResultCard(QWidget):
+    """Una canción encontrada, con botón para añadirla o quitarla de la lista,
+    y un botón ▶ encima de la miniatura para escucharla antes (ui/preview_player.py)."""
+
+    toggled = Signal(object)         # Track: añadir o quitar de la lista
+    play_requested = Signal(object)  # Track: ▶ o ■
 
     COVER = QSize(112, 63)
+    PLAY = 30   # tamaño del botón ▶
 
     def __init__(self, track: Track, parent=None):
         super().__init__(parent)
@@ -73,10 +81,29 @@ class ResultCard(QWidget):
         self.cover.setFixedSize(self.COVER)
         self.cover.setPixmap(placeholder_cover(self.COVER.width(), self.COVER.height()))
 
+        # Escuchar: botón redondo en el centro de la miniatura y, mientras suena,
+        # una barrita de progreso en su borde de abajo.
+        self.play = QPushButton(self.cover)
+        self.play.setObjectName("Play")
+        self.play.setCursor(Qt.PointingHandCursor)
+        self.play.setFixedSize(self.PLAY, self.PLAY)
+        self.play.move((self.COVER.width() - self.PLAY) // 2, (self.COVER.height() - self.PLAY) // 2)
+        self.play.clicked.connect(lambda: self.play_requested.emit(self.track))
+        self.play_bar = QProgressBar(self.cover)
+        self.play_bar.setObjectName("PlayBar")
+        self.play_bar.setRange(0, 1000)
+        self.play_bar.setTextVisible(False)
+        self.play_bar.setGeometry(6, self.COVER.height() - 7, self.COVER.width() - 12, 3)
+        self.play_bar.hide()
+        # La ruedita de «cargando» es el icono girando un poco cada 50 ms.
+        self._spin_timer = QTimer(self, interval=50, timeout=self._spin)
+        self._angle = 0
+
         self.title = QLabel()
         self.title.setObjectName("CardTitle")
         _elide(self.title, track.title)
         meta = " · ".join(x for x in (track.channel, track.duration_text) if x)
+        self._meta_text = meta
         self.meta = QLabel(meta)
         self.meta.setObjectName("Muted")
         self.badge = QLabel("Ya descargada")
@@ -107,6 +134,7 @@ class ResultCard(QWidget):
         layout.addLayout(text, 1)
         layout.addWidget(self.button)
         self.set_added(False)
+        self.set_preview_state("parado")
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -125,6 +153,57 @@ class ResultCard(QWidget):
 
     def set_downloaded(self, downloaded: bool) -> None:
         self.badge.setVisible(downloaded)
+
+    # --- Escuchar antes de descargar ---------------------------------------------
+
+    def set_preview_state(self, state: str) -> None:
+        """«cargando», «sonando», «parado» o «error» (ver ui/preview_player.py)."""
+        self._spin_timer.stop()
+        self.play.setProperty("playing", state in ("cargando", "sonando"))
+        self.play.style().unpolish(self.play)
+        self.play.style().polish(self.play)
+        if state == "cargando":
+            self.play.setToolTip("Cargando… (pulsa para cancelar)")
+            self._spin_timer.start()
+            self._spin()
+            self.meta.setText(f"Cargando…  ·  {self._meta_text}")
+        elif state == "sonando":
+            self.play.setIcon(icons.icon("stop", 16, "#ffffff"))
+            self.play.setToolTip("Parar")
+            self.play_bar.show()
+        else:
+            self.play.setIcon(icons.icon("play", 16, "#ffffff"))
+            self.play.setToolTip("Escuchar")
+            self.play_bar.hide()
+            self.play_bar.setValue(0)
+            self.meta.setStyleSheet("")
+            self.meta.setText(self._meta_text)
+
+    def set_preview_progress(self, position: int, duration: int) -> None:
+        if duration > 0:
+            self.play_bar.setValue(int(position * 1000 / duration))
+        self.meta.setStyleSheet(f"color: {theme.ACCENT_2};")
+        self.meta.setText(f"♪ {_mm_ss(position)} / {_mm_ss(duration)}  ·  {self.track.channel}")
+
+    def _spin(self) -> None:
+        self._angle = (self._angle + 30) % 360
+        self.play.setIcon(QIcon(_rotated(icons.pixmap("loader", 16, "#ffffff", 2.6), self._angle)))
+
+
+def _rotated(pix: QPixmap, angle: float) -> QPixmap:
+    """El mismo icono girado, sin que cambie de tamaño (para la ruedita)."""
+    ratio = pix.devicePixelRatio()
+    out = QPixmap(pix.size())
+    out.setDevicePixelRatio(ratio)
+    out.fill(Qt.transparent)
+    lado = pix.width() / ratio
+    painter = QPainter(out)
+    painter.setRenderHint(QPainter.SmoothPixmapTransform)
+    painter.translate(lado / 2, lado / 2)
+    painter.rotate(angle)
+    painter.drawPixmap(QPointF(-lado / 2, -lado / 2), pix)
+    painter.end()
+    return out
 
 
 class QueueCard(QWidget):

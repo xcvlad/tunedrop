@@ -71,6 +71,7 @@
           buildInputs = [
             pkgs.qt6.qtbase
             pkgs.qt6.qtwayland           # para escritorios con Wayland (GNOME, KDE...)
+            pkgs.qt6.qtmultimedia        # sonido: escuchar antes de descargar
           ];
 
           installPhase = ''

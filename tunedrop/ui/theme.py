@@ -77,6 +77,16 @@ QPushButton#Add {{
 }}
 QPushButton#Add:hover {{ background: {ACCENT}; }}
 QPushButton#Add[added="true"] {{ background: {ACCENT}; }}
+/* ▶ encima de la miniatura (escuchar antes de descargar) */
+QPushButton#Play {{
+    background: rgba(14, 16, 20, 0.72); border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 15px; padding: 0;
+}}
+QPushButton#Play:hover, QPushButton#Play[playing="true"] {{ background: {ACCENT}; border-color: {ACCENT}; }}
+QProgressBar#PlayBar {{
+    background: rgba(0, 0, 0, 0.55); border-radius: 1px; max-height: 3px; min-height: 3px;
+}}
+QProgressBar#PlayBar::chunk {{ background: {ACCENT_2}; border-radius: 1px; }}
 QPushButton#Link {{ background: transparent; border: none; color: {MUTED}; padding: 4px 6px; }}
 QPushButton#Link:hover {{ color: {TEXT}; }}
 

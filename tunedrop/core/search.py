@@ -92,11 +92,14 @@ def _pick_thumbnail(entry: dict, video_id: str, extractor: str) -> str | None:
 
 
 def _friendly(message: str) -> str:
-    message = message.replace("ERROR: ", "")
+    """Convierte un error de yt-dlp en un mensaje que se entienda."""
+    message = re.sub(r"\x1b\[[0-9;]*m", "", message)          # códigos de color de la terminal
+    message = message.replace("ERROR:", "").strip()
+    message = re.sub(r"^\[[\w:]+\]\s*[\w-]+:\s*", "", message)  # «[youtube] dQw4w9WgXcQ: »
     if "Unsupported URL" in message:
         return "Ese enlace no es compatible."
     if "Private video" in message:
         return "Ese vídeo es privado."
-    if "Video unavailable" in message:
+    if "Video unavailable" in message or "video is unavailable" in message:
         return "Ese vídeo no está disponible."
     return message
