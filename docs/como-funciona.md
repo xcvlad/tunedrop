@@ -33,6 +33,7 @@ tunedrop/
 │   │   ├── converter.py      ←     Convierte el audio a MP3/M4A con ffmpeg
 │   │   ├── tagger.py         ←     Escribe título, artista, carátula, letra… en el archivo
 │   │   ├── lyrics.py         ←     Busca la letra de la canción en LRCLIB
+│   │   ├── preview.py        ←     Consigue la dirección del audio para escucharlo
 │   │   ├── titles.py         ←     Limpia títulos: quita «(Official Video)», etc.
 │   │   ├── paths.py          ←     Nombre de cada archivo: «Artista - Título.mp3»
 │   │   ├── models.py         ←     Qué es una «canción» (Track) y los formatos
@@ -44,6 +45,7 @@ tunedrop/
 │   └── ui/                   ←   La interfaz: todo lo que ves
 │       ├── main_window.py    ←     La ventana principal
 │       ├── startup.py        ←     Pantalla de carga y «una sola tunedrop abierta»
+│       ├── preview_player.py ←     El reproductor del ▶ (escuchar antes de descargar)
 │       ├── update_banner.py  ←     El aviso «Hay una versión nueva» y el botón Actualizar
 │       ├── widgets.py        ←     Las tarjetas de cada canción
 │       ├── settings_dialog.py←     La ventana de ajustes (⚙)
@@ -93,6 +95,10 @@ Esto es lo que pasa cuando buscas y descargas una canción:
  Escribes "canción"  ──►   search.py pide los resultados  ──────►   YouTube
                            (con yt-dlp, directamente)       ◄────   lista de vídeos
  Ves las tarjetas    ◄──   main_window.py las dibuja
+
+ Pulsas ▶             ──►  preview.py pide a yt-dlp la dirección ──►  YouTube
+                           del audio, y preview_player.py      ◄────  el audio, mientras suena
+                           lo reproduce desde ahí (sin descargar)
 
  Pulsas + y Descargar ──►  downloader.py, por cada canción:
                             1. yt-dlp descarga el mejor audio ◄───  YouTube
@@ -167,6 +173,7 @@ Si hay una más nueva, `update_banner.py` muestra el aviso. Actualizar es lo mis
 | **Release** | Una versión publicada en GitHub con archivos descargables (el `.exe`). |
 | **GitHub Actions** | Servidores de GitHub que ejecutan tareas automáticas (tests, compilar). |
 | **Letra sincronizada / `.lrc`** | Una letra en la que cada línea lleva el momento en que se canta, por ejemplo `[00:07.13] Caught in a landslide`. Los reproductores que la entienden la van mostrando a la vez que suena. |
+| **Reproducir «en streaming»** | Escuchar un audio mientras llega por internet, sin descargarlo antes entero. Es lo que hace el ▶: el reproductor de Qt va recibiendo el audio de YouTube y lo reproduce a la vez. |
 | **LRCLIB** | Web gratuita y abierta con letras de canciones que sube su comunidad. tunedrop le pregunta por artista, título y duración. |
 | **SHA-256** | «Huella digital» de un archivo. Si cambia un solo byte, la huella es totalmente distinta. |
 

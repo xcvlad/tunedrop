@@ -124,6 +124,6 @@ Windows SmartScreen avisa de cualquier programa que no esté firmado con un cert
 
 ## Tamaño
 
-El instalador ocupa unos 115 MB. Casi todo son ffmpeg (~130 MB sin comprimir), Deno (~100 MB) y Qt, la librería de la interfaz. Son programas completos que la app necesita para funcionar sin depender de nada instalado en el ordenador.
+El instalador ocupa unos 125 MB. Casi todo son ffmpeg (~130 MB sin comprimir), Deno (~100 MB) y Qt, la librería de la interfaz y del reproductor que se usa para escuchar antes de descargar (trae su propio ffmpeg, unos 20 MB). Son programas completos que la app necesita para funcionar sin depender de nada instalado en el ordenador.
 
 [← Cómo funciona](como-funciona.md) · [Volver al README](../README.md)

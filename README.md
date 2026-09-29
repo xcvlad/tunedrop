@@ -24,6 +24,7 @@
 ## Qué hace
 
 - 🔎 **Busca** canciones escribiendo su nombre, o pega un enlace de YouTube, una playlist, SoundCloud, Bandcamp…
+- ▶ **Escucha antes de descargar**: pulsa ▶ sobre la miniatura y suena al momento, sin descargar nada, para asegurarte de que es la versión buena.
 - ➕ **Elige** las que quieras con un clic, o **Añadir todas** para una playlist entera.
 - ⬇ **Descarga** todas de una vez, con varias en paralelo y el progreso de cada una.
 - 🎵 **Archivos listos para reproductores e iPods**:
@@ -119,8 +120,9 @@ Para actualizarlo: `nix flake update tunedrop` en la carpeta de tu configuració
 ### Cómo se usa
 
 1. Abre tunedrop, escribe el nombre de una canción y pulsa **Buscar**.
-2. Pulsa **+** en las que quieras.
-3. Pulsa **Descargar**. Las canciones aparecen en tu carpeta de música, dentro de `tunedrop`, con el nombre `Artista - Título.mp3`.
+2. Si dudas de cuál es la buena, pulsa **▶** sobre la miniatura para escucharla (■ para parar).
+3. Pulsa **+** en las que quieras.
+4. Pulsa **Descargar**. Las canciones aparecen en tu carpeta de música, dentro de `tunedrop`, con el nombre `Artista - Título.mp3`.
 
 > Pegar en la terminal un comando de internet es cómodo, pero solo debes hacerlo si confías en quien lo publica. Puedes leer antes lo que hace cada script: [`instalar/windows.ps1`](instalar/windows.ps1), [`instalar/linux.sh`](instalar/linux.sh) y [`flake.nix`](flake.nix). Y si quieres comprobar que el programa descargado es legítimo, mira [¿Es fiable?](#es-fiable).
 
@@ -181,7 +183,7 @@ YouTube guarda el audio a unos **128-160 kbps** (formatos Opus o AAC). Convertir
 | Pieza | Qué hace | Licencia |
 |---|---|---|
 | [Python](https://www.python.org/) | Lenguaje de programación | PSF |
-| [PySide6 (Qt)](https://doc.qt.io/qtforpython-6/) | Interfaz gráfica | LGPL-3.0 |
+| [PySide6 (Qt)](https://doc.qt.io/qtforpython-6/) | Interfaz gráfica y reproductor para escuchar antes de descargar | LGPL-3.0 |
 | [yt-dlp](https://github.com/yt-dlp/yt-dlp) | Conexión con YouTube y otras webs | Unlicense |
 | [Deno](https://deno.com/) | Ejecuta el JavaScript que YouTube exige | MIT |
 | [ffmpeg](https://ffmpeg.org/) ([compilación LGPL](https://github.com/BtbN/FFmpeg-Builds)) | Conversión a MP3 | LGPL-2.1+ |
