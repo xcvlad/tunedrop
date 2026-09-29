@@ -49,13 +49,10 @@ jobs:
           - nombre: openSUSE Tumbleweed
             imagen: opensuse/tumbleweed
             preparar: zypper -n install curl tar gzip gawk
-          # Demasiado antiguas (glibc < 2.35): el instalador debe avisar y no instalar.
+          # Demasiado antigua (glibc < 2.35): el instalador debe avisar y no instalar.
+          # (Debian 11 no se puede probar: ya no tiene soporte y sus repositorios no responden.)
           - nombre: Linux Mint 20.3 (antigua)
             imagen: linuxmintd/mint20.3-amd64
-            preparar: apt-get update && apt-get install -y curl ca-certificates
-            antigua: true
-          - nombre: Debian 11 (antigua)
-            imagen: debian:11
             preparar: apt-get update && apt-get install -y curl ca-certificates
             antigua: true
     env:

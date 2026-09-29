@@ -215,15 +215,26 @@ librerias_que_faltan() {
     for f in "$interno"/libpython3*.so* \
              "$interno"/libQt6{Core,Gui,Widgets,Network,Svg,Multimedia,XcbQpa,DBus,OpenGL}.so.6 \
              "$interno"/PySide6/Qt/plugins/platforms/libqxcb.so \
-             "$interno"/PySide6/Qt/plugins/multimedia/libffmpegmediaplugin.so; do
+             "$interno"/PySide6/Qt/plugins/multimedia/libffmpegmediaplugin.so \
+             "$interno"/libtk8.6.so; do      # la usa la pantalla de carga
         if [ -e "$f" ]; then archivos+=("$f"); fi
     done
-    if [ "${#archivos[@]}" -eq 0 ] || ! command -v ldd >/dev/null; then
-        return 0      # no se puede comprobar: mejor no avisar de nada
-    fi
+    if [ "${#archivos[@]}" -eq 0 ]; then return 0; fi
     # Las líneas de lo que falta son así:  «libEGL.so.1 => not found»
-    LD_LIBRARY_PATH="$interno" ldd "${archivos[@]}" 2>/dev/null |
+    LD_LIBRARY_PATH="$interno" listar_librerias "${archivos[@]}" 2>/dev/null |
         awk '$2 == "=>" && $3 == "not" { print $1 }' | sort -u
+}
+
+# «ldd archivo...» dice qué librerías usan esos archivos. Algunas distribuciones
+# mínimas no traen ldd (Arch y openSUSE en su versión mínima), pero sí el
+# «cargador» de programas de Linux, que es lo que ldd usa por dentro.
+listar_librerias() {
+    local f
+    if command -v ldd >/dev/null; then
+        ldd "$@" || true
+    elif [ -x /lib64/ld-linux-x86-64.so.2 ]; then
+        for f in "$@"; do /lib64/ld-linux-x86-64.so.2 --list "$f" || true; done
+    fi
 }
 
 # El gestor de paquetes de la distribución, para dar el comando exacto.
@@ -240,27 +251,40 @@ esac
 
 # El paquete que instala una librería en cada distribución (vacío si no se sabe).
 paquete_de() {
-    case "$GESTOR:$1" in
-        apt:libEGL.so.1) echo libegl1 ;;
-        apt:libGL.so.1) echo libgl1 ;;
-        apt:libOpenGL.so.0) echo libopengl0 ;;
-        apt:libGLX.so.0) echo libglx0 ;;
-        apt:libxcb-cursor.so.0) echo libxcb-cursor0 ;;
-        apt:libpulse.so.0) echo libpulse0 ;;
-        dnf:libEGL.so.1) echo libglvnd-egl ;;
-        dnf:libGL.so.1 | dnf:libGLX.so.0) echo libglvnd-glx ;;
-        dnf:libOpenGL.so.0) echo libglvnd-opengl ;;
-        dnf:libxcb-cursor.so.0) echo xcb-util-cursor ;;
-        dnf:libpulse.so.0) echo pulseaudio-libs ;;
-        pacman:libEGL.so.1 | pacman:libGL.so.1 | pacman:libOpenGL.so.0 | pacman:libGLX.so.0) echo libglvnd ;;
-        pacman:libxcb-cursor.so.0) echo xcb-util-cursor ;;
-        pacman:libpulse.so.0) echo libpulse ;;
-        zypper:libEGL.so.1) echo libEGL1 ;;
-        zypper:libGL.so.1) echo libGL1 ;;
-        zypper:libOpenGL.so.0) echo libOpenGL0 ;;
-        zypper:libGLX.so.0) echo libGLX0 ;;
-        zypper:libxcb-cursor.so.0) echo libxcb-cursor0 ;;
-        zypper:libpulse.so.0) echo libpulse0 ;;
+    local nombre="${1%%.so.*}" version="${1##*.so.}"
+    case "$GESTOR" in
+        apt | zypper)
+            # Debian, Ubuntu, Mint y openSUSE siguen una regla: el paquete se llama
+            # como la librería más su número de versión. Si el nombre acaba en
+            # número, van separados por un guion:
+            #   libxcb-icccm.so.4 -> libxcb-icccm4      libxkbcommon-x11.so.0 -> libxkbcommon-x11-0
+            # En Debian van en minúsculas (libEGL.so.1 -> libegl1); en openSUSE, no (libEGL1).
+            case "$nombre" in *[0-9]) nombre="$nombre-" ;; esac
+            if [ "$GESTOR" = "apt" ]; then nombre=$(printf '%s' "$nombre" | tr '[:upper:]' '[:lower:]'); fi
+            echo "$nombre$version" ;;
+        dnf | pacman)
+            # En Fedora y Arch no hay regla: los nombres van uno a uno.
+            case "$GESTOR:$nombre" in
+                dnf:libEGL) echo libglvnd-egl ;;
+                dnf:libGL | dnf:libGLX) echo libglvnd-glx ;;
+                dnf:libOpenGL) echo libglvnd-opengl ;;
+                pacman:libEGL | pacman:libGL | pacman:libGLX | pacman:libOpenGL) echo libglvnd ;;
+                *:libxcb | *:libxcb-shape | *:libxcb-xfixes | *:libxcb-shm | *:libxcb-randr | *:libxcb-sync | *:libxcb-xkb | *:libxcb-render)
+                    echo libxcb ;;
+                *:libxcb-icccm) echo xcb-util-wm ;;
+                *:libxcb-keysyms) echo xcb-util-keysyms ;;
+                *:libxcb-image) echo xcb-util-image ;;
+                *:libxcb-render-util) echo xcb-util-renderutil ;;
+                *:libxcb-cursor) echo xcb-util-cursor ;;
+                *:libxkbcommon) echo libxkbcommon ;;
+                *:libxkbcommon-x11) echo libxkbcommon-x11 ;;
+                *:libdrm) echo libdrm ;;
+                *:libfontconfig) echo fontconfig ;;
+                dnf:libfreetype) echo freetype ;;
+                pacman:libfreetype) echo freetype2 ;;
+                dnf:libpulse) echo pulseaudio-libs ;;
+                pacman:libpulse) echo libpulse ;;
+            esac ;;
     esac
 }
 
@@ -356,7 +380,11 @@ command -v tar >/dev/null || fallo "Hace falta tar."
 # necesita su glibc (2.35) o una más nueva. Con una más antigua no arrancaría,
 # así que mejor avisar antes de descargar nada.
 GLIBC_MINIMA="2.35"
-GLIBC=$(ldd --version 2>/dev/null | awk 'NR == 1 { print $NF }') || GLIBC=""
+# «getconf GNU_LIBC_VERSION» responde «glibc 2.35». Si no, se pregunta a ldd.
+GLIBC=$(getconf GNU_LIBC_VERSION 2>/dev/null | awk '{ print $2 }') || GLIBC=""
+if [ -z "$GLIBC" ]; then
+    GLIBC=$(ldd --version 2>/dev/null | awk 'NR == 1 { print $NF }') || GLIBC=""
+fi
 case "$GLIBC" in
     [0-9]*.[0-9]*)
         if [ "$(printf '%s\n%s\n' "$GLIBC_MINIMA" "$GLIBC" | sort -V | awk 'NR == 1')" != "$GLIBC_MINIMA" ]; then
@@ -462,12 +490,15 @@ if [ -n "$FALTAN" ]; then
             *) $ORDEN </dev/tty || true ;;
         esac
         echo
-    elif [ -n "$ORDEN" ]; then
-        printf '  Instálalas con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN" "$NORMAL"
     else
-        echo "  Instálalas con el gestor de paquetes de tu distribución"
-        echo "  (busca qué paquete contiene cada una)."
-        echo
+        if [ -n "$ORDEN" ]; then
+            printf '  Instálalas con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN" "$NORMAL"
+        fi
+        if [ -n "$DESCONOCIDAS" ]; then
+            echo "  Con el gestor de paquetes de tu distribución, busca qué paquete"
+            echo "  contiene cada una de estas:$DESCONOCIDAS"
+            echo
+        fi
     fi
 
     # ¿Siguen faltando?
