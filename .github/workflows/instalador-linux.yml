@@ -89,6 +89,15 @@ jobs:
             echo "$orden" > orden.txt
           fi
 
+      - name: Diagnóstico (temporal)
+        if: ${{ !matrix.antigua }}
+        run: |
+          I="$HOME/.local/share/tunedrop/_internal"
+          echo "ldd: $(command -v ldd || echo NO)"; ls -la /lib64/ld-linux-x86-64.so.2 || true
+          ls "$I"/PySide6/Qt/plugins/platforms/ | head -3 || true
+          echo "--- ldd:"; LD_LIBRARY_PATH="$I" ldd "$I/PySide6/Qt/plugins/platforms/libqxcb.so" 2>&1 | head -8 || true
+          echo "--- ld.so:"; LD_LIBRARY_PATH="$I" /lib64/ld-linux-x86-64.so.2 --list "$I/PySide6/Qt/plugins/platforms/libqxcb.so" 2>&1 | head -8 || true
+
       - name: 2. Instalar las librerías con el comando que ha dado el instalador
         if: ${{ !matrix.antigua && hashFiles('orden.txt') != '' }}
         run: |
