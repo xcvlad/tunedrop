@@ -23,6 +23,13 @@ on:
     tags: ["v*"]
   workflow_dispatch:
 
+# Una compilación a la vez por versión. Con la v0.5.0, GitHub lanzó dos a la
+# vez para la misma etiqueta y las dos crearon la Release al mismo tiempo: salió
+# un borrador duplicado y faltó SHA256SUMS.txt. Así, la segunda espera su turno.
+concurrency:
+  group: compilar-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write       # para crear la Release y subir los archivos
   id-token: write       # para firmar el certificado de procedencia
