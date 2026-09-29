@@ -64,6 +64,17 @@ git push origin v0.2.0
 
 En unos 10 minutos aparece la versión nueva en **Releases**, y los comandos de instalación ya la descargan. Las tunedrop ya instaladas la detectan al abrirse y muestran el aviso de versión nueva.
 
+## Que funcione en todos los Linux
+
+El programa de Linux lleva dentro casi todas sus librerías: Python, Qt, las de ventanas (xcb), las de sonido (libpulse)… Solo necesita del sistema **glibc 2.35 o más nueva** (la de Ubuntu 22.04, donde se compila) y las librerías de **gráficos** (libEGL, libGL), que dependen de la tarjeta gráfica de cada ordenador y cualquier escritorio ya tiene.
+
+El comando de instalar ([`instalar/linux.sh`](../instalar/linux.sh)) lo comprueba:
+
+- **Antes de descargar**, que glibc sea lo bastante nueva. Si no, avisa y no descarga nada.
+- **Después de instalar**, qué librerías le faltan de verdad a tunedrop en ese sistema. Se lo pregunta al cargador de programas de Linux, como hace `ldd`. Si falta alguna, da el comando exacto para tu distribución (apt, dnf, pacman o zypper) y ofrece instalarla.
+
+El archivo [`.github/workflows/instalador-linux.yml`](../.github/workflows/instalador-linux.yml) lo prueba de verdad en GitHub, en cada cambio del instalador. Ejecuta `linux.sh` dentro de contenedores mínimos de **Linux Mint 22.1 y 21.3, Ubuntu 24.04, Debian 12, Fedora, Arch y openSUSE**: que detecte lo que falta, que el comando que da lo instale, que termine en «¡Listo!», que el programa arranque y que el comando `tunedrop` exista en una terminal nueva. Con Linux Mint 20.3 comprueba que avisa de que es demasiado antigua.
+
 ## Y en NixOS
 
 En NixOS no se usa nada de lo anterior. NixOS guarda las librerías en `/nix/store` y no en las carpetas de siempre (`/usr/lib`...), así que el programa de Linux que crea PyInstaller no encuentra lo que necesita.

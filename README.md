@@ -83,7 +83,7 @@ Para desinstalarlo:
 curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash -s -- --desinstalar
 ```
 
-> Si la ventana no se abre y ves un error sobre `xcb`, instala la librería que Qt necesita: `sudo apt install libxcb-cursor0` (Ubuntu/Debian), `sudo dnf install xcb-util-cursor` (Fedora) o `sudo pacman -S xcb-util-cursor` (Arch). El instalador ya te avisa si te falta.
+> El programa lleva dentro casi todo lo que necesita. Si a tu sistema le falta alguna librería (suelen ser las de gráficos, en instalaciones mínimas), el instalador te dice cuál, te da el comando para tu distribución y te ofrece instalarla. Funciona en Ubuntu 22.04, Linux Mint 21, Debian 12, Fedora 36 o más nuevos; con uno más antiguo, el instalador te avisa antes de descargar nada.
 
 #### NixOS
 

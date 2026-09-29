@@ -68,6 +68,7 @@ tunedrop/
 ├── .github/workflows/        ← AUTOMATIZACIÓN EN GITHUB
 │   ├── tests.yml             ←   Pasa los tests en Windows y Linux en cada subida
 │   ├── nix.yml               ←   Comprueba que flake.nix funciona (en cada subida y cada lunes)
+│   ├── instalador-linux.yml  ←   Prueba instalar/linux.sh en Mint, Ubuntu, Debian, Fedora, Arch y openSUSE
 │   └── release.yml           ←   Compila y publica las dos versiones al crear una versión
 │
 ├── docs/                     ← Estas guías y la captura del README
