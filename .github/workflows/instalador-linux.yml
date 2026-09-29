@@ -1,0 +1,124 @@
+# Prueba el instalador de Linux (instalar/linux.sh) en varias distribuciones.
+#
+# Cada distribución se prueba dentro de un «contenedor»: un Linux mínimo y
+# aislado que GitHub crea y borra en segundos. Al ser mínimos, no traen las
+# librerías gráficas, así que sirven justo para comprobar que el instalador:
+#   1. detecta lo que falta y da el comando correcto para esa distribución,
+#   2. con eso instalado, termina en «¡Listo!»,
+#   3. deja el programa funcionando y el comando «tunedrop» en las terminales nuevas.
+# En las distribuciones demasiado antiguas, comprueba que avisa y no instala.
+#
+# Instala la última versión publicada (el instalador siempre la descarga de Releases).
+name: Instalador de Linux
+
+on:
+  push:
+    branches: [main]
+    paths: ["instalar/linux.sh", ".github/workflows/instalador-linux.yml"]
+  pull_request:
+    paths: ["instalar/linux.sh", ".github/workflows/instalador-linux.yml"]
+  workflow_dispatch:
+
+jobs:
+  probar:
+    name: ${{ matrix.nombre }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.imagen }}
+    strategy:
+      fail-fast: false        # si falla en una distribución, sigue probando las demás
+      matrix:
+        include:
+          - nombre: Linux Mint 22.1
+            imagen: linuxmintd/mint22.1-amd64
+            preparar: apt-get update && apt-get install -y curl ca-certificates
+          - nombre: Linux Mint 21.3
+            imagen: linuxmintd/mint21.3-amd64
+            preparar: apt-get update && apt-get install -y curl ca-certificates
+          - nombre: Ubuntu 24.04
+            imagen: ubuntu:24.04
+            preparar: apt-get update && apt-get install -y curl ca-certificates
+          - nombre: Debian 12
+            imagen: debian:12
+            preparar: apt-get update && apt-get install -y curl ca-certificates
+          - nombre: Fedora
+            imagen: fedora:latest
+            preparar: dnf install -y curl tar gzip gawk findutils
+          - nombre: Arch Linux
+            imagen: archlinux:latest
+            preparar: pacman -Syu --noconfirm curl tar gzip gawk
+          - nombre: openSUSE Tumbleweed
+            imagen: opensuse/tumbleweed
+            preparar: zypper -n install curl tar gzip gawk
+          # Demasiado antiguas (glibc < 2.35): el instalador debe avisar y no instalar.
+          - nombre: Linux Mint 20.3 (antigua)
+            imagen: linuxmintd/mint20.3-amd64
+            preparar: apt-get update && apt-get install -y curl ca-certificates
+            antigua: true
+          - nombre: Debian 11 (antigua)
+            imagen: debian:11
+            preparar: apt-get update && apt-get install -y curl ca-certificates
+            antigua: true
+    env:
+      SHELL: /bin/bash          # como en un escritorio normal
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Preparar el sistema mínimo (curl, tar...)
+        run: ${{ matrix.preparar }}
+
+      - name: Descargar el código del repositorio
+        uses: actions/checkout@v7
+
+      - name: Distribución antigua - debe avisar y no instalar
+        if: matrix.antigua
+        run: |
+          if bash instalar/linux.sh > salida.txt 2>&1; then
+            cat salida.txt; echo "Debería haber avisado de que es demasiado antigua"; exit 1
+          fi
+          cat salida.txt
+          grep -q "demasiado antiguo" salida.txt
+          test ! -e "$HOME/.local/share/tunedrop"
+
+      - name: 1. Instalar en el sistema mínimo - debe decir qué librerías faltan
+        if: ${{ !matrix.antigua }}
+        run: |
+          bash instalar/linux.sh > salida1.txt 2>&1
+          cat salida1.txt
+          if grep -q "le faltan" salida1.txt; then
+            # El comando que da el instalador, sin «sudo» (aquí ya somos administrador).
+            orden=$(sed -n 's/.*Instálalas con:  sudo //p' salida1.txt)
+            if [ -z "$orden" ]; then echo "Faltan librerías pero no ha dado el comando"; exit 1; fi
+            echo "$orden" > orden.txt
+          fi
+
+      - name: 2. Instalar las librerías con el comando que ha dado el instalador
+        if: ${{ !matrix.antigua && hashFiles('orden.txt') != '' }}
+        run: |
+          echo "Ejecutando: $(cat orden.txt)"
+          $(cat orden.txt)
+
+      - name: 3. Volver a instalar - ahora debe terminar en «¡Listo!»
+        if: ${{ !matrix.antigua }}
+        run: |
+          bash instalar/linux.sh > salida2.txt 2>&1
+          cat salida2.txt
+          grep -q "¡Listo!" salida2.txt
+          if grep -q "le faltan" salida2.txt; then exit 1; fi
+
+      - name: 4. El programa funciona (autodiagnóstico)
+        if: ${{ !matrix.antigua }}
+        run: |
+          cd "$(mktemp -d)"
+          "$HOME/.local/share/tunedrop/tunedrop" --comprobar
+
+      - name: 5. La ventana se abre (sin pantalla, dibujada en memoria)
+        if: ${{ !matrix.antigua }}
+        run: |
+          codigo=0
+          QT_QPA_PLATFORM=offscreen timeout 20 "$HOME/.local/share/tunedrop/tunedrop" || codigo=$?
+          if [ "$codigo" -ne 124 ]; then echo "La ventana se cerró sola (código $codigo)"; exit 1; fi
+
+      - name: 6. El comando «tunedrop» existe en una terminal nueva
+        if: ${{ !matrix.antigua }}
+        run: bash -ic 'command -v tunedrop'

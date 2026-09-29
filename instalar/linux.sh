@@ -200,6 +200,104 @@ descargar() {
     wait "$pid"
 }
 
+# ============================================================
+#  Librerías del sistema y el comando «tunedrop»
+# ============================================================
+
+# El programa lleva dentro casi todas sus librerías, pero algunas tiene que
+# ponerlas el sistema: sobre todo las de gráficos (libEGL, libGL), que dependen
+# de la tarjeta gráfica de cada ordenador. «ldd» es la herramienta de Linux que
+# dice qué librerías necesita un programa y si las encuentra. Revisando las
+# piezas de tunedrop con ella se sabe exactamente qué falta, en cualquier distribución.
+# Escribe una librería que falta por línea (nada si no falta ninguna).
+librerias_que_faltan() {
+    local interno="$DESTINO/_internal" archivos=() f
+    for f in "$interno"/libpython3*.so* \
+             "$interno"/libQt6{Core,Gui,Widgets,Network,Svg,Multimedia,XcbQpa,DBus,OpenGL}.so.6 \
+             "$interno"/PySide6/Qt/plugins/platforms/libqxcb.so \
+             "$interno"/PySide6/Qt/plugins/multimedia/libffmpegmediaplugin.so; do
+        if [ -e "$f" ]; then archivos+=("$f"); fi
+    done
+    if [ "${#archivos[@]}" -eq 0 ] || ! command -v ldd >/dev/null; then
+        return 0      # no se puede comprobar: mejor no avisar de nada
+    fi
+    # Las líneas de lo que falta son así:  «libEGL.so.1 => not found»
+    LD_LIBRARY_PATH="$interno" ldd "${archivos[@]}" 2>/dev/null |
+        awk '$2 == "=>" && $3 == "not" { print $1 }' | sort -u
+}
+
+# El gestor de paquetes de la distribución, para dar el comando exacto.
+# /etc/os-release dice qué distribución es (ID) y en cuál se basa (ID_LIKE):
+# Linux Mint, por ejemplo, tiene ID=linuxmint e ID_LIKE="ubuntu debian".
+GESTOR=""
+DISTRO=" $(. /etc/os-release 2>/dev/null; echo "${ID:-} ${ID_LIKE:-}") "
+case "$DISTRO" in
+    *" debian "* | *" ubuntu "*) GESTOR="apt" ;;
+    *" fedora "* | *" rhel "*) GESTOR="dnf" ;;
+    *" arch "*) GESTOR="pacman" ;;
+    *" suse "* | *" opensuse "*) GESTOR="zypper" ;;
+esac
+
+# El paquete que instala una librería en cada distribución (vacío si no se sabe).
+paquete_de() {
+    case "$GESTOR:$1" in
+        apt:libEGL.so.1) echo libegl1 ;;
+        apt:libGL.so.1) echo libgl1 ;;
+        apt:libOpenGL.so.0) echo libopengl0 ;;
+        apt:libGLX.so.0) echo libglx0 ;;
+        apt:libxcb-cursor.so.0) echo libxcb-cursor0 ;;
+        apt:libpulse.so.0) echo libpulse0 ;;
+        dnf:libEGL.so.1) echo libglvnd-egl ;;
+        dnf:libGL.so.1 | dnf:libGLX.so.0) echo libglvnd-glx ;;
+        dnf:libOpenGL.so.0) echo libglvnd-opengl ;;
+        dnf:libxcb-cursor.so.0) echo xcb-util-cursor ;;
+        dnf:libpulse.so.0) echo pulseaudio-libs ;;
+        pacman:libEGL.so.1 | pacman:libGL.so.1 | pacman:libOpenGL.so.0 | pacman:libGLX.so.0) echo libglvnd ;;
+        pacman:libxcb-cursor.so.0) echo xcb-util-cursor ;;
+        pacman:libpulse.so.0) echo libpulse ;;
+        zypper:libEGL.so.1) echo libEGL1 ;;
+        zypper:libGL.so.1) echo libGL1 ;;
+        zypper:libOpenGL.so.0) echo libOpenGL0 ;;
+        zypper:libGLX.so.0) echo libGLX0 ;;
+        zypper:libxcb-cursor.so.0) echo libxcb-cursor0 ;;
+        zypper:libpulse.so.0) echo libpulse0 ;;
+    esac
+}
+
+# La orden para instalar paquetes con el gestor de la distribución.
+orden_instalar() {
+    case "$GESTOR" in
+        apt) echo "sudo apt install -y" ;;
+        dnf) echo "sudo dnf install -y" ;;
+        pacman) echo "sudo pacman -S --needed --noconfirm" ;;
+        zypper) echo "sudo zypper install -y" ;;
+    esac
+}
+
+# ~/.local/bin es la carpeta estándar para los comandos de cada usuario, pero en
+# Ubuntu, Linux Mint y otras solo entra en el PATH (la lista de carpetas donde la
+# terminal busca comandos) al iniciar sesión, y solo si ya existía. Para no tener
+# que cerrar sesión, se añade a la configuración de la terminal (bash, zsh y
+# fish): las terminales que abras a partir de ahora ya la tendrán.
+anadir_al_path() {
+    local linea='export PATH="$HOME/.local/bin:$PATH"  # añadido por el instalador de tunedrop' rc
+    local terminal="${SHELL:-}"
+    if [ "${terminal##*/}" = "bash" ] && [ ! -f "$HOME/.bashrc" ]; then
+        touch "$HOME/.bashrc"      # sin él, bash no tendría dónde leer la línea
+    fi
+    for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
+        # Solo si ese archivo existe y no menciona ya ~/.local/bin.
+        if [ -f "$rc" ] && ! grep -qs '\.local/bin' "$rc"; then
+            printf '\n%s\n' "$linea" >>"$rc"
+        fi
+    done
+    if command -v fish >/dev/null; then
+        mkdir -p "$HOME/.config/fish/conf.d"
+        echo 'fish_add_path -g "$HOME/.local/bin"  # añadido por el instalador de tunedrop' \
+            >"$HOME/.config/fish/conf.d/tunedrop.fish"
+    fi
+}
+
 # Al terminar (bien, mal o con Ctrl+C): borrar la carpeta temporal y volver a
 # mostrar el cursor, que se esconde durante las animaciones para que no parpadee.
 limpiar() {
@@ -252,6 +350,21 @@ command -v curl >/dev/null || fallo "Hace falta curl." "Instálalo con: sudo apt
 command -v tar >/dev/null || fallo "Hace falta tar."
 [ "$(uname -m)" = "x86_64" ] || fallo "De momento solo hay versión para PC de 64 bits (x86_64). Tu equipo es $(uname -m)." \
     "Puedes ejecutarlo desde el código: https://github.com/$REPO#para-programadores"
+
+# glibc es la librería básica de Linux, y cada distribución trae la suya. El
+# programa se compila en Ubuntu 22.04 (ver .github/workflows/release.yml) y
+# necesita su glibc (2.35) o una más nueva. Con una más antigua no arrancaría,
+# así que mejor avisar antes de descargar nada.
+GLIBC_MINIMA="2.35"
+GLIBC=$(ldd --version 2>/dev/null | awk 'NR == 1 { print $NF }') || GLIBC=""
+case "$GLIBC" in
+    [0-9]*.[0-9]*)
+        if [ "$(printf '%s\n%s\n' "$GLIBC_MINIMA" "$GLIBC" | sort -V | awk 'NR == 1')" != "$GLIBC_MINIMA" ]; then
+            fallo "Tu Linux es demasiado antiguo para esta versión de tunedrop (tiene glibc $GLIBC)." \
+                "Necesita Ubuntu 22.04, Linux Mint 21, Debian 12, Fedora 36 o más nuevos.
+    Otra opción es instalarlo con Nix: https://github.com/$REPO#nixos"
+        fi ;;
+esac
 
 # --- 1. Buscar la última versión --------------------------------
 # La página .../releases/latest redirige a la última versión, por ejemplo
@@ -315,29 +428,77 @@ con_espera "Añadiendo tunedrop al menú de aplicaciones" crear_accesos
 hecho "Añadido al menú de aplicaciones" "y el comando «tunedrop»"
 echo
 
-# --- Librería del sistema que necesita Qt -------------------------
-# La ventana usa Qt, que necesita libxcb-cursor. Falta en algunas instalaciones mínimas.
-if command -v ldconfig >/dev/null && ! ldconfig -p | grep -q libxcb-cursor; then
-    caja "$AMARILLO" \
-        "$AVISO  Falta libxcb-cursor, una librería que la ventana necesita." \
-        "   Instálala con el comando de tu distribución:" \
-        "" \
-        "   Ubuntu/Debian:  sudo apt install libxcb-cursor0" \
-        "   Fedora:         sudo dnf install xcb-util-cursor" \
-        "   Arch:           sudo pacman -S xcb-util-cursor"
+# --- 5. Librerías del sistema --------------------------------------
+# Solo se avisa de lo que falta de verdad (ver librerias_que_faltan, arriba).
+FALTAN=$(librerias_que_faltan) || FALTAN=""
+if [ -n "$FALTAN" ]; then
+    PAQUETES="" DESCONOCIDAS=""
+    for lib in $FALTAN; do
+        paquete=$(paquete_de "$lib")
+        if [ -z "$paquete" ]; then
+            DESCONOCIDAS="$DESCONOCIDAS $lib"
+        else
+            case " $PAQUETES " in *" $paquete "*) ;; *) PAQUETES="${PAQUETES:+$PAQUETES }$paquete" ;; esac
+        fi
+    done
+    lineas=("$AVISO  A tu sistema le faltan librerías que tunedrop necesita:" "")
+    for lib in $FALTAN; do lineas+=("     $lib"); done
+    caja "$AMARILLO" "${lineas[@]}"
     echo
+    ORDEN=""
+    if [ -n "$PAQUETES" ] && [ -n "$(orden_instalar)" ]; then ORDEN="$(orden_instalar) $PAQUETES"; fi
+
+    # Si sabemos qué paquetes son, se ofrece instalarlos ahora. La respuesta se
+    # lee de la terminal (/dev/tty), porque este script llega por «curl | bash».
+    if [ -n "$ORDEN" ] && [ -z "$DESCONOCIDAS" ] && command -v sudo >/dev/null &&
+        { true </dev/tty; } 2>/dev/null; then
+        if [ "$BONITO" = 1 ]; then printf '\033[?25h'; fi    # cursor visible para escribir
+        printf '  Se instalan con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN" "$NORMAL"
+        printf '  ¿Las instalo ahora? Te pedirá tu contraseña. [S/n] '
+        read -r respuesta </dev/tty || respuesta="n"
+        echo
+        case "$respuesta" in
+            [nN]*) ;;
+            *) $ORDEN </dev/tty || true ;;
+        esac
+        echo
+    elif [ -n "$ORDEN" ]; then
+        printf '  Instálalas con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN" "$NORMAL"
+    else
+        echo "  Instálalas con el gestor de paquetes de tu distribución"
+        echo "  (busca qué paquete contiene cada una)."
+        echo
+    fi
+
+    # ¿Siguen faltando?
+    FALTAN=$(librerias_que_faltan) || FALTAN=""
+    if [ -z "$FALTAN" ]; then
+        hecho "Librerías del sistema instaladas"
+        echo
+    fi
 fi
 
 # --- Listo ---------------------------------------------------------
-# ~/.local/bin solo entra en el PATH (la lista de carpetas donde la terminal
-# busca comandos) al iniciar sesión, y solo si ya existía. Si es nueva, avisamos.
+# El comando «tunedrop» está en ~/.local/bin. Si esta terminal ya la tiene en el
+# PATH, funciona ya; si no, se añade para las terminales nuevas (anadir_al_path).
 case ":$PATH:" in
     *":$HOME/.local/bin:"*) PISTA="o escribe en la terminal:  tunedrop" ;;
-    *) PISTA="(el comando «tunedrop» funcionará al volver a iniciar sesión)" ;;
+    *)
+        anadir_al_path
+        PISTA="o abre una terminal nueva y escribe:  tunedrop" ;;
 esac
-caja "$VERDE" \
-    "$BIEN  ¡Listo! tunedrop $VERSION está instalado." \
-    "" \
-    "   Ábrelo desde el menú de aplicaciones" \
-    "   $PISTA"
+if [ -z "$FALTAN" ]; then
+    caja "$VERDE" \
+        "$BIEN  ¡Listo! tunedrop $VERSION está instalado." \
+        "" \
+        "   Ábrelo desde el menú de aplicaciones" \
+        "   $PISTA"
+else
+    caja "$AMARILLO" \
+        "$AVISO  tunedrop $VERSION está instalado, pero le faltan" \
+        "   las librerías de arriba." \
+        "" \
+        "   Cuando las instales, ábrelo desde el menú de aplicaciones" \
+        "   $PISTA"
+fi
 echo
