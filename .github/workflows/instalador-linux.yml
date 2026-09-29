@@ -92,8 +92,9 @@ jobs:
       - name: 2. Instalar las librerías con el comando que ha dado el instalador
         if: ${{ !matrix.antigua && hashFiles('orden.txt') != '' }}
         run: |
+          # Tal cual se copiaría en la terminal (con sus comillas).
           echo "Ejecutando: $(cat orden.txt)"
-          $(cat orden.txt)
+          bash -c "$(cat orden.txt)"
 
       - name: 3. Volver a instalar - ahora debe terminar en «¡Listo!»
         if: ${{ !matrix.antigua }}

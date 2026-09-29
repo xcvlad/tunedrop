@@ -262,37 +262,34 @@ esac
 paquete_de() {
     local nombre="${1%%.so.*}" version="${1##*.so.}"
     case "$GESTOR" in
-        apt | zypper)
-            # Debian, Ubuntu, Mint y openSUSE siguen una regla: el paquete se llama
-            # como la librería más su número de versión. Si el nombre acaba en
-            # número, van separados por un guion:
-            #   libxcb-icccm.so.4 -> libxcb-icccm4      libxkbcommon-x11.so.0 -> libxkbcommon-x11-0
-            # En Debian van en minúsculas (libEGL.so.1 -> libegl1); en openSUSE, no (libEGL1).
+        apt)
+            # Debian, Ubuntu y Mint siguen una regla: el paquete se llama como la
+            # librería, en minúsculas, más su número de versión (con un guion si el
+            # nombre acaba en número):
+            #   libEGL.so.1 -> libegl1    libxcb-icccm.so.4 -> libxcb-icccm4    libxkbcommon-x11.so.0 -> libxkbcommon-x11-0
             case "$nombre" in *[0-9]) nombre="$nombre-" ;; esac
-            if [ "$GESTOR" = "apt" ]; then nombre=$(printf '%s' "$nombre" | tr '[:upper:]' '[:lower:]'); fi
-            echo "$nombre$version" ;;
-        dnf | pacman)
-            # En Fedora y Arch no hay regla: los nombres van uno a uno.
-            case "$GESTOR:$nombre" in
-                dnf:libEGL) echo libglvnd-egl ;;
-                dnf:libGL | dnf:libGLX) echo libglvnd-glx ;;
-                dnf:libOpenGL) echo libglvnd-opengl ;;
-                pacman:libEGL | pacman:libGL | pacman:libGLX | pacman:libOpenGL) echo libglvnd ;;
-                *:libxcb | *:libxcb-shape | *:libxcb-xfixes | *:libxcb-shm | *:libxcb-randr | *:libxcb-sync | *:libxcb-xkb | *:libxcb-render)
+            printf '%s%s\n' "$(printf '%s' "$nombre" | tr '[:upper:]' '[:lower:]')" "$version" ;;
+        dnf | zypper)
+            # Fedora y openSUSE dejan pedir un paquete por la librería que contiene:
+            # el gestor busca solo qué paquete la trae (vale para cualquier librería).
+            echo "$1()(64bit)" ;;
+        pacman)
+            # En Arch no hay regla: los nombres van uno a uno.
+            case "$nombre" in
+                libEGL | libGL | libGLX | libOpenGL) echo libglvnd ;;
+                libxcb | libxcb-shape | libxcb-xfixes | libxcb-shm | libxcb-randr | libxcb-sync | libxcb-xkb | libxcb-render)
                     echo libxcb ;;
-                *:libxcb-icccm) echo xcb-util-wm ;;
-                *:libxcb-keysyms) echo xcb-util-keysyms ;;
-                *:libxcb-image) echo xcb-util-image ;;
-                *:libxcb-render-util) echo xcb-util-renderutil ;;
-                *:libxcb-cursor) echo xcb-util-cursor ;;
-                *:libxkbcommon) echo libxkbcommon ;;
-                *:libxkbcommon-x11) echo libxkbcommon-x11 ;;
-                *:libdrm) echo libdrm ;;
-                *:libfontconfig) echo fontconfig ;;
-                dnf:libfreetype) echo freetype ;;
-                pacman:libfreetype) echo freetype2 ;;
-                dnf:libpulse) echo pulseaudio-libs ;;
-                pacman:libpulse) echo libpulse ;;
+                libxcb-icccm) echo xcb-util-wm ;;
+                libxcb-keysyms) echo xcb-util-keysyms ;;
+                libxcb-image) echo xcb-util-image ;;
+                libxcb-render-util) echo xcb-util-renderutil ;;
+                libxcb-cursor) echo xcb-util-cursor ;;
+                libxkbcommon) echo libxkbcommon ;;
+                libxkbcommon-x11) echo libxkbcommon-x11 ;;
+                libdrm) echo libdrm ;;
+                libfontconfig) echo fontconfig ;;
+                libfreetype) echo freetype2 ;;
+                libpulse) echo libpulse ;;
             esac ;;
     esac
 }
@@ -482,15 +479,26 @@ if [ -n "$FALTAN" ]; then
     for lib in $FALTAN; do lineas+=("     $lib"); done
     caja "$AMARILLO" "${lineas[@]}"
     echo
-    ORDEN=""
-    if [ -n "$PAQUETES" ] && [ -n "$(orden_instalar)" ]; then ORDEN="$(orden_instalar) $PAQUETES"; fi
+    # ORDEN es lo que se ejecuta; ORDEN_TEXTO, lo que se enseña para copiarlo: los
+    # nombres con paréntesis (Fedora, openSUSE) van entre comillas para la terminal.
+    ORDEN="" ORDEN_TEXTO=""
+    if [ -n "$PAQUETES" ] && [ -n "$(orden_instalar)" ]; then
+        ORDEN="$(orden_instalar) $PAQUETES"
+        ORDEN_TEXTO="$(orden_instalar)"
+        for paquete in $PAQUETES; do
+            case "$paquete" in
+                *"("*) ORDEN_TEXTO="$ORDEN_TEXTO '$paquete'" ;;
+                *) ORDEN_TEXTO="$ORDEN_TEXTO $paquete" ;;
+            esac
+        done
+    fi
 
     # Si sabemos qué paquetes son, se ofrece instalarlos ahora. La respuesta se
     # lee de la terminal (/dev/tty), porque este script llega por «curl | bash».
     if [ -n "$ORDEN" ] && [ -z "$DESCONOCIDAS" ] && command -v sudo >/dev/null &&
         { true </dev/tty; } 2>/dev/null; then
         if [ "$BONITO" = 1 ]; then printf '\033[?25h'; fi    # cursor visible para escribir
-        printf '  Se instalan con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN" "$NORMAL"
+        printf '  Se instalan con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN_TEXTO" "$NORMAL"
         printf '  ¿Las instalo ahora? Te pedirá tu contraseña. [S/n] '
         read -r respuesta </dev/tty || respuesta="n"
         echo
@@ -501,7 +509,7 @@ if [ -n "$FALTAN" ]; then
         echo
     else
         if [ -n "$ORDEN" ]; then
-            printf '  Instálalas con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN" "$NORMAL"
+            printf '  Instálalas con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN_TEXTO" "$NORMAL"
         fi
         if [ -n "$DESCONOCIDAS" ]; then
             echo "  Con el gestor de paquetes de tu distribución, busca qué paquete"
