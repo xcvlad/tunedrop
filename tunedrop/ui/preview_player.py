@@ -93,10 +93,11 @@ class PreviewPlayer(QObject):
             return
         try:
             player = self._ensure_player()
-        except ImportError:
-            # En Linux, el sonido de Qt necesita la librería libpulse del sistema.
-            self._set_state(ERROR, "falta la librería de sonido libpulse. Instálala con "
-                                   "«sudo apt install libpulse0» (o el paquete de tu distribución).")
+        except ImportError as exc:
+            # En Linux, el sonido de Qt necesita algunas librerías del sistema
+            # (sobre todo libpulse). El mensaje dice cuál falta: «libpulse.so.0: ...».
+            falta = str(exc).split(":")[0]
+            self._set_state(ERROR, f"a tu sistema le falta la librería {falta}, que el sonido necesita.")
             self.key = None
             return
         player.setSource(QUrl(result))
