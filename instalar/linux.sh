@@ -227,17 +227,17 @@ librerias_que_faltan() {
 
 # Lista las librerías que usan unos archivos, buscando también en la carpeta de
 # tunedrop. Uso: listar_librerias CARPETA archivo...
-# Se pregunta directamente al «cargador» de programas de Linux (lo que usa ldd
-# por dentro), con --library-path para que esa carpeta valga solo para esta
-# consulta. ldd es un script de bash y, si se le pasa la carpeta con
-# LD_LIBRARY_PATH, el propio bash intenta usar las librerías de tunedrop y en
-# algunas distribuciones (Arch, openSUSE) se cae.
+# Se pregunta directamente al «cargador» de programas de Linux, que es lo que
+# ldd hace por dentro. No se usa ldd porque es un script de bash: si se le pasa
+# la carpeta de tunedrop con LD_LIBRARY_PATH, el propio bash intenta usar las
+# librerías de tunedrop y en algunas distribuciones (Arch, openSUSE) se cae. Así,
+# LD_LIBRARY_PATH solo le llega al cargador.
 listar_librerias() {
     local carpeta=$1 f
     shift
     if [ -x /lib64/ld-linux-x86-64.so.2 ]; then
         for f in "$@"; do
-            /lib64/ld-linux-x86-64.so.2 --library-path "$carpeta" --list "$f" || true
+            LD_LIBRARY_PATH="$carpeta" /lib64/ld-linux-x86-64.so.2 --list "$f" || true
         done
     elif command -v ldd >/dev/null; then
         LD_LIBRARY_PATH="$carpeta" ldd "$@" || true

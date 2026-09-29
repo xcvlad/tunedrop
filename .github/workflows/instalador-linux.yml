@@ -95,7 +95,11 @@ jobs:
           I="$HOME/.local/share/tunedrop/_internal"
           echo "ldd: $(command -v ldd || echo NO)"; ls -la /lib64/ld-linux-x86-64.so.2 || true
           ls "$I"/PySide6/Qt/plugins/platforms/ | head -3 || true
-          echo "--- ld.so:"; /lib64/ld-linux-x86-64.so.2 --library-path "$I" --list "$I/PySide6/Qt/plugins/platforms/libqxcb.so" 2>&1 | grep "not found" || echo "(no falta nada)"
+          L=/lib64/ld-linux-x86-64.so.2; F="$I/PySide6/Qt/plugins/platforms/libqxcb.so"
+          echo "a) --library-path --list: $($L --library-path "$I" --list "$F" 2>&1 | grep -c "not found")"
+          echo "b) LD_LIBRARY_PATH + --list: $(LD_LIBRARY_PATH="$I" $L --list "$F" 2>&1 | grep -c "not found")"
+          echo "c) LD_TRACE_LOADED_OBJECTS: $(LD_TRACE_LOADED_OBJECTS=1 LD_LIBRARY_PATH="$I" $L "$F" 2>&1 | grep -c "not found")"
+          echo "--- b) completo:"; LD_LIBRARY_PATH="$I" $L --list "$F" 2>&1 | head -12
 
       - name: 2. Instalar las librerías con el comando que ha dado el instalador
         if: ${{ !matrix.antigua && hashFiles('orden.txt') != '' }}
