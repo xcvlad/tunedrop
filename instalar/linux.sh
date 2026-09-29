@@ -221,19 +221,26 @@ librerias_que_faltan() {
     done
     if [ "${#archivos[@]}" -eq 0 ]; then return 0; fi
     # Las líneas de lo que falta son así:  «libEGL.so.1 => not found»
-    LD_LIBRARY_PATH="$interno" listar_librerias "${archivos[@]}" 2>/dev/null |
+    listar_librerias "$interno" "${archivos[@]}" 2>/dev/null |
         awk '$2 == "=>" && $3 == "not" { print $1 }' | sort -u
 }
 
-# «ldd archivo...» dice qué librerías usan esos archivos. Algunas distribuciones
-# mínimas no traen ldd (Arch y openSUSE en su versión mínima), pero sí el
-# «cargador» de programas de Linux, que es lo que ldd usa por dentro.
+# Lista las librerías que usan unos archivos, buscando también en la carpeta de
+# tunedrop. Uso: listar_librerias CARPETA archivo...
+# Se pregunta directamente al «cargador» de programas de Linux (lo que usa ldd
+# por dentro), con --library-path para que esa carpeta valga solo para esta
+# consulta. ldd es un script de bash y, si se le pasa la carpeta con
+# LD_LIBRARY_PATH, el propio bash intenta usar las librerías de tunedrop y en
+# algunas distribuciones (Arch, openSUSE) se cae.
 listar_librerias() {
-    local f
-    if command -v ldd >/dev/null; then
-        ldd "$@" || true
-    elif [ -x /lib64/ld-linux-x86-64.so.2 ]; then
-        for f in "$@"; do /lib64/ld-linux-x86-64.so.2 --list "$f" || true; done
+    local carpeta=$1 f
+    shift
+    if [ -x /lib64/ld-linux-x86-64.so.2 ]; then
+        for f in "$@"; do
+            /lib64/ld-linux-x86-64.so.2 --library-path "$carpeta" --list "$f" || true
+        done
+    elif command -v ldd >/dev/null; then
+        LD_LIBRARY_PATH="$carpeta" ldd "$@" || true
     fi
 }
 
