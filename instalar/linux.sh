@@ -231,13 +231,15 @@ librerias_que_faltan() {
 # ldd hace por dentro. No se usa ldd porque es un script de bash: si se le pasa
 # la carpeta de tunedrop con LD_LIBRARY_PATH, el propio bash intenta usar las
 # librerías de tunedrop y en algunas distribuciones (Arch, openSUSE) se cae. Así,
-# LD_LIBRARY_PATH solo le llega al cargador.
+# LD_LIBRARY_PATH solo le llega al cargador. LD_TRACE_LOADED_OBJECTS=1 le pide
+# que liste todas las librerías sin cargar el programa (con «--list», en cambio,
+# se para en la primera que falta).
 listar_librerias() {
     local carpeta=$1 f
     shift
     if [ -x /lib64/ld-linux-x86-64.so.2 ]; then
         for f in "$@"; do
-            LD_LIBRARY_PATH="$carpeta" /lib64/ld-linux-x86-64.so.2 --list "$f" || true
+            LD_TRACE_LOADED_OBJECTS=1 LD_LIBRARY_PATH="$carpeta" /lib64/ld-linux-x86-64.so.2 "$f" || true
         done
     elif command -v ldd >/dev/null; then
         LD_LIBRARY_PATH="$carpeta" ldd "$@" || true
