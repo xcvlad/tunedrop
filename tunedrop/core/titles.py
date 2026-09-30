@@ -64,6 +64,26 @@ def clean_title(title: str) -> str:
     return cleaned.strip(" -–—|")
 
 
+def soften_caps(texto: str) -> str:
+    """«BAD BUNNY» -> «Bad Bunny»; «TITI ME PREGUNTO» -> «Titi Me Pregunto».
+
+    Algunos vídeos lo escriben todo en mayúsculas, y el iPod trataría «BAD BUNNY»
+    y «Bad Bunny» como dos artistas distintos. Solo se toca si TODO está en
+    mayúsculas y hay varias palabras: los nombres de una palabra suelen ser siglas
+    o el estilo del artista (ABBA, BTS, AC/DC, DESPECHÁ) y se dejan igual, y
+    también los números romanos («Rocky II»).
+    """
+    if texto != texto.upper() or texto == texto.lower() or len(texto.split()) < 2:
+        return texto
+    palabras = []
+    for palabra in texto.split(" "):
+        if re.fullmatch(r"[IVXLC]+", palabra):
+            palabras.append(palabra)                      # número romano
+        else:
+            palabras.append(palabra[:1] + palabra[1:].lower())
+    return " ".join(palabras)
+
+
 def clean_channel(channel: str) -> str:
     channel = _TOPIC.sub("", channel or "")
     # "ArtistVEVO" -> "Artist"; no toca nombres que simplemente contienen "vevo".

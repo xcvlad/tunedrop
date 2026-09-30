@@ -49,8 +49,8 @@ USER_AGENT = f"tunedrop/{__version__} (https://github.com/xcvlad/tunedrop)"
 
 MARGEN_SEGUNDOS = 10
 # Si el título dice esto, es otra versión de la canción: no se busca el álbum.
-_OTRA_VERSION = re.compile(r"\b(live|en vivo|en directo|directo|remix|acoustic|acústic[oa]|demo)\b",
-                           re.IGNORECASE)
+_OTRA_VERSION = re.compile(r"\b(live|en vivo|en directo|directo|remix|mix|acoustic|acústic[oa]|"
+                           r"unplugged|demo|instrumental|karaoke)\b", re.IGNORECASE)
 
 # Una consulta por segundo como mucho (dejamos un poco de margen).
 _turno = threading.Lock()
@@ -61,9 +61,10 @@ _PAUSA = 1.1
 @dataclass
 class AlbumInfo:
     album: str
-    album_artist: str
+    album_artist: str       # el artista, tal como lo escribe oficialmente (ver apply_album)
     year: str | None        # año de la primera edición del disco
     release_group_id: str   # el «grupo de publicaciones» de MusicBrainz
+    title: str = ""         # el título de la canción, tal como lo escribe oficialmente
 
     @property
     def cover_url(self) -> str:
@@ -95,7 +96,7 @@ def find_album(artist: str, title: str, duration: float | None = None,
             break
     if not elegido:
         return None
-    grupo_id, album, album_artist, anio_grabacion = elegido
+    grupo_id, album, album_artist, titulo, anio_grabacion = elegido
     grupo = _consultar(f"release-group/{grupo_id}", {}, timeout)
     if grupo is None:
         return None
@@ -106,26 +107,29 @@ def find_album(artist: str, title: str, duration: float | None = None,
     # ese no es su álbum.
     if anio and anio_grabacion and anio < anio_grabacion:
         return None
-    return AlbumInfo(album=album, album_artist=album_artist, year=anio, release_group_id=grupo_id)
+    return AlbumInfo(album=_signos(album), album_artist=_signos(album_artist), year=anio,
+                     release_group_id=grupo_id, title=_signos(titulo))
 
 
 def pick_release_group(recordings: list[dict], title: str,
-                       duration: float | None) -> tuple[str, str, str, str | None] | None:
+                       duration: float | None) -> tuple[str, str, str, str, str | None] | None:
     """Entre los resultados de MusicBrainz, el disco original de la canción.
 
-    Devuelve (id del grupo de publicaciones, nombre del álbum, artista del álbum,
-    año en que salió la grabación elegida).
+    Devuelve (id del grupo de publicaciones, nombre del álbum, artista, título de
+    la canción y año en que salió la grabación elegida).
     """
     buscado = _normalizar(title)
     ediciones: Counter[str] = Counter()
     primera_fecha: dict[str, str] = {}
-    datos: dict[str, tuple[str, str]] = {}
+    datos: dict[str, tuple[str, str, str]] = {}
     anio_grabacion: dict[str, str | None] = {}
     for grabacion in recordings:
         if (grabacion.get("score") or 0) < 80:
             continue                       # MusicBrainz no está seguro de que sea esta
         if _normalizar(grabacion.get("title", "")) != buscado:
             continue                       # otra canción con un título parecido
+        if _OTRA_VERSION.search(grabacion.get("title", "")):
+            continue                       # «Wonderwall (unplugged)»: otra versión
         largo = grabacion.get("length")
         if duration and largo and abs(largo / 1000 - duration) > MARGEN_SEGUNDOS:
             continue                       # otra versión (más larga o más corta)
@@ -138,7 +142,8 @@ def pick_release_group(recordings: list[dict], title: str,
             ediciones[grupo["id"]] += 1
             fecha = edicion.get("date") or "9999"
             primera_fecha[grupo["id"]] = min(fecha, primera_fecha.get(grupo["id"], "9999"))
-            datos[grupo["id"]] = (grupo.get("title") or edicion.get("title") or "", artista)
+            datos[grupo["id"]] = (grupo.get("title") or edicion.get("title") or "", artista,
+                                  grabacion.get("title") or "")
             estreno = (grabacion.get("first-release-date") or "")[:4]
             if re.fullmatch(r"\d{4}", estreno):
                 anio_grabacion[grupo["id"]] = min(estreno, anio_grabacion.get(grupo["id"]) or "9999")
@@ -149,8 +154,8 @@ def pick_release_group(recordings: list[dict], title: str,
     # reediciones de «Bad», de 1987, pero es de «Thriller», de 1982). Si hay
     # empate de fecha, el que tiene más ediciones.
     mejor = min(ediciones, key=lambda g: (primera_fecha[g], -ediciones[g]))
-    album, artista = datos[mejor]
-    return (mejor, album, artista, anio_grabacion.get(mejor)) if album else None
+    album, artista, titulo = datos[mejor]
+    return (mejor, album, artista, titulo, anio_grabacion.get(mejor)) if album else None
 
 
 def _artista(grabacion: dict) -> str:
@@ -159,6 +164,14 @@ def _artista(grabacion: dict) -> str:
     for credito in grabacion.get("artist-credit") or []:
         partes.append((credito.get("name") or "") + (credito.get("joinphrase") or ""))
     return "".join(partes).strip()
+
+
+def _signos(texto: str) -> str:
+    """Los signos tipográficos de MusicBrainz, como los del teclado: el guion
+    especial de «a‐ha» y el apóstrofo curvo de «What’s». Si no, el iPod vería
+    «a‐ha» y «a-ha» como dos artistas distintos."""
+    # ‐ y ‑: guiones tipográficos; ’: apóstrofo curvo.
+    return texto.replace("‐", "-").replace("‑", "-").replace("’", "'")
 
 
 def _normalizar(texto: str) -> str:

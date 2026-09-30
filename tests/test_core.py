@@ -21,7 +21,7 @@ from tunedrop.core.paths import build_output_path, sanitize, unique_path
 from tunedrop.core.search import _friendly, entry_to_track, is_url
 from tunedrop.core.settings import Settings, _linux_music_dir
 from tunedrop.core.tagger import Tags, prepare_cover, write_tags
-from tunedrop.core.titles import clean_channel, clean_title, split_artist_title
+from tunedrop.core.titles import clean_channel, clean_title, soften_caps, split_artist_title
 
 HAS_FFMPEG = shutil.which("ffmpeg") is not None
 
@@ -365,14 +365,18 @@ def test_musicbrainz_skips_live_compilations_and_bootlegs():
 
 
 def test_musicbrainz_requires_same_song_and_duration():
-    otra = [_grabacion("Billie Jean (Remix)", 294000, [("Remixes", "rmx", "1990", [], "Official")])]
-    assert pick_release_group(otra, "Billie Jean", 294)[0] == "rmx"          # sin paréntesis es el mismo título
+    parentesis = [_grabacion("Billie Jean (2008 Version)", 294000, [("Otro", "otro", "2008", [], "Official")])]
+    assert pick_release_group(parentesis, "Billie Jean", 294)[0] == "otro"   # sin paréntesis es el mismo título
+    remix = [_grabacion("Billie Jean (Remix)", 294000, [("Remixes", "rmx", "1990", [], "Official")])]
+    assert pick_release_group(remix, "Billie Jean", 294) is None             # pero un remix es otra versión
     distinta = [_grabacion("Billie Jeans", 294000, [("Otro", "otro", "1990", [], "Official")])]
     assert pick_release_group(distinta, "Billie Jean", 294) is None           # otra canción
     larga = [_grabacion("Billie Jean", 360000, [("Otro", "otro", "1990", [], "Official")])]
     assert pick_release_group(larga, "Billie Jean", 294) is None              # 66 s más: otra versión
     dudosa = [_grabacion("Billie Jean", 294000, [("Otro", "otro", "1990", [], "Official")], score=60)]
     assert pick_release_group(dudosa, "Billie Jean", 294) is None             # MusicBrainz no está seguro
+    acustica = [_grabacion("Wonderwall (unplugged)", 258000, [("Otro", "otro", "1996", [], "Official")])]
+    assert pick_release_group(acustica, "Wonderwall", 258) is None            # otra versión de la canción
 
 
 def test_musicbrainz_skips_live_titles_without_asking(monkeypatch):
@@ -403,6 +407,33 @@ def test_apply_album_sets_album_and_original_year():
     tags = Tags(title="Billie Jean", artist="Michael Jackson", year="2009")
     apply_album(tags, musicbrainz.AlbumInfo("Thriller", "Michael Jackson", "1982", "id"))
     assert (tags.album, tags.year, tags.album_artist) == ("Thriller", "1982", None)
+
+
+@pytest.mark.parametrize("raw, expected", [
+    ("BAD BUNNY", "Bad Bunny"),
+    ("TITÍ ME PREGUNTÓ", "Tití Me Preguntó"),
+    ("ROCKY II", "Rocky II"),                 # números romanos, igual
+    ("ABBA", "ABBA"), ("BTS", "BTS"), ("AC/DC", "AC/DC"), ("DESPECHÁ", "DESPECHÁ"),  # una palabra, igual
+    ("Bad Bunny", "Bad Bunny"), ("BZRP Music Sessions", "BZRP Music Sessions"),        # no todo en mayúsculas
+])
+def test_soften_caps(raw, expected):
+    assert soften_caps(raw) == expected
+
+
+def test_build_tags_softens_all_caps():
+    info = {"title": "BAD BUNNY - TITI ME PREGUNTO (Official Video)", "channel": "Bad Bunny"}
+    tags = build_tags(info, Track(id="1", url="u", title="t"))
+    assert (tags.artist, tags.title) == ("Bad Bunny", "Titi Me Pregunto")
+
+
+def test_apply_album_uses_official_spelling_only_if_same_words():
+    tags = Tags(title="Titi Me Pregunto", artist="BAD BUNNY", album_artist="BAD BUNNY")
+    apply_album(tags, musicbrainz.AlbumInfo("Un verano sin ti", "Bad Bunny", "2022", "id", "Tití Me Preguntó"))
+    assert (tags.title, tags.artist, tags.album_artist) == ("Tití Me Preguntó", "Bad Bunny", "Bad Bunny")
+    # Con otras palabras no se toca nada: «(feat. …)» y los dúos se quedan.
+    tags = Tags(title="Song (feat. Someone)", artist="Artist, Other")
+    apply_album(tags, musicbrainz.AlbumInfo("Disco", "Artist", "2020", "id", "Song"))
+    assert (tags.title, tags.artist) == ("Song (feat. Someone)", "Artist, Other")
 
 
 def test_apply_album_keeps_track_number_only_if_same_album():

@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 import tempfile
 import threading
+import unicodedata
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
@@ -18,7 +19,7 @@ from .models import AudioFormat, Track
 from .paths import build_output_path, unique_path
 from .runtime import base_ydl_options
 from .tagger import Tags, fetch_image, prepare_cover, write_tags
-from .titles import clean_channel, clean_title, split_artist_title
+from .titles import clean_channel, clean_title, soften_caps, split_artist_title
 
 
 class Stage(str, Enum):
@@ -101,9 +102,23 @@ def download_track(
             "noplaylist": True,
             "writethumbnail": False,
         }
+        busqueda_letra = busqueda_album = None
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(track.url, download=True)
+                # 1. Qué canción es (título, artista, duración...), sin descargar nada.
+                info = ydl.extract_info(track.url, download=False)
+                tags = build_tags(info, track)
+                # La letra y el álbum se buscan ya, en otros hilos, mientras se
+                # descarga y se convierte el audio: así casi nunca hay que esperarlos.
+                # Se buscan con el primer artista (no «A, B»), que es como están
+                # en LRCLIB y en MusicBrainz.
+                artista, duracion = tags.album_artist or tags.artist, info.get("duration")
+                if options.lyrics:
+                    busqueda_letra = _en_segundo_plano(find_lyrics, artista, tags.title, duracion)
+                if options.album_info:
+                    busqueda_album = _en_segundo_plano(_album_y_portada, artista, tags.title, duracion)
+                # 2. Descargar el audio (es lo que extract_info(download=True) hace después).
+                info = ydl.process_ie_result(info, download=True)
         except yt_dlp.utils.DownloadError as exc:
             if cancel_event.is_set():
                 raise Cancelled() from exc
@@ -113,22 +128,6 @@ def download_track(
         downloaded = next((p for p in workdir.iterdir() if p.stem == "audio"), None)
         if not downloaded:
             raise RuntimeError("yt-dlp no produjo ningún archivo de audio")
-
-        tags = build_tags(info, track)
-        target = unique_path(build_output_path(
-            options.output_dir,
-            artist=tags.album_artist or tags.artist, title=tags.title,
-            extension=options.audio_format.extension,
-        ))
-
-        # La letra y el álbum se buscan en otros hilos mientras ffmpeg convierte: así
-        # no hay que esperarlos. Se buscan con el primer artista (no «A, B»), que es
-        # como están en LRCLIB y en MusicBrainz.
-        artista, duracion = tags.album_artist or tags.artist, info.get("duration")
-        busqueda_letra = (_en_segundo_plano(find_lyrics, artista, tags.title, duracion)
-                          if options.lyrics else None)
-        busqueda_album = (_en_segundo_plano(_album_y_portada, artista, tags.title, duracion)
-                          if options.album_info else None)
 
         fmt = options.audio_format
         progress(Stage.CONVERTING, 1.0, "")
@@ -148,6 +147,13 @@ def download_track(
         cover = cover or _best_cover(info)
         write_tags(temp_out, tags, cover)
 
+        # El nombre del archivo se decide al final, con el artista y el título ya
+        # corregidos (p. ej. «BAD BUNNY» -> «Bad Bunny» gracias a MusicBrainz).
+        target = unique_path(build_output_path(
+            options.output_dir,
+            artist=tags.album_artist or tags.artist, title=tags.title,
+            extension=options.audio_format.extension,
+        ))
         save_to_destination(temp_out, target)
         if lyrics and lyrics.synced and options.lrc_file:
             save_lrc(target, tags, lyrics.synced)
@@ -211,8 +217,11 @@ def _album_y_portada(artist: str, title: str, duration: float | None) -> tuple[A
 def apply_album(tags: Tags, album: AlbumInfo) -> None:
     """Pone en las etiquetas el álbum original y su año.
 
-    El artista del álbum NO se cambia: MusicBrainz a veces lo escribe con otros
-    caracteres («a‐ha» con un guion especial) y el iPod lo trataría como otro artista.
+    Además, el artista y el título pasan a escribirse como en MusicBrainz, pero
+    SOLO si son las mismas palabras y cambian las mayúsculas o las tildes
+    («BAD BUNNY» -> «Bad Bunny», «Titi Me Pregunto» -> «Tití Me Preguntó»). Así
+    todas las canciones de un artista llevan su nombre escrito igual y el iPod no
+    lo separa en dos. Nunca se quita ni se añade nada («(feat. X)» se queda).
     """
     if tags.album and tags.album.casefold() != album.album.casefold():
         # YouTube Music daba otro disco (p. ej. un recopilatorio): su número de
@@ -221,6 +230,20 @@ def apply_album(tags: Tags, album: AlbumInfo) -> None:
     tags.album = album.album
     if album.year:
         tags.year = album.year
+    if album.title and _misma_escritura(tags.title, album.title):
+        tags.title = album.title
+    if _misma_escritura(tags.artist, album.album_artist):
+        tags.artist = album.album_artist
+    if tags.album_artist and _misma_escritura(tags.album_artist, album.album_artist):
+        tags.album_artist = album.album_artist
+
+
+def _misma_escritura(a: str, b: str) -> bool:
+    """True si a y b son lo mismo salvo mayúsculas y tildes («TITI» y «Tití»)."""
+    def clave(texto: str) -> str:
+        sin_tildes = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+        return " ".join(sin_tildes.casefold().split())
+    return bool(a) and bool(b) and clave(a) == clave(b)
 
 
 def save_lrc(song: Path, tags: Tags, synced: str) -> Path:
@@ -253,11 +276,13 @@ def build_tags(info: dict, track: Track) -> Tags:
                                            info.get("channel") or track.channel)
     album_artist = info.get("album_artist") or (artists[0] if artists else artist)
     year = info.get("release_year") or info.get("release_date") or info.get("upload_date")
+    # «BAD BUNNY» -> «Bad Bunny» (ver soften_caps). Si MusicBrainz encuentra la
+    # canción, apply_album pone además cómo la escribe el artista oficialmente.
     return Tags(
-        title=title.strip(),
-        artist=artist.strip(),
+        title=soften_caps(title.strip()),
+        artist=soften_caps(artist.strip()),
         album=info.get("album") or None,
-        album_artist=clean_channel(album_artist) or artist,
+        album_artist=soften_caps(clean_channel(album_artist) or artist.strip()),
         track_number=info.get("track_number"),
         year=str(year)[:4] if year else None,
         comment=info.get("webpage_url") or track.url,
@@ -268,14 +293,20 @@ def _best_cover(info: dict, intentos: int = 10) -> bytes | None:
     """La miniatura del vídeo, como portada de reserva.
 
     yt-dlp lista muchas miniaturas posibles, pero no todas existen: los vídeos
-    antiguos no tienen las más grandes (maxresdefault, hq720) y dan error 404.
-    Se prueban de mejor a peor hasta que una funcione. Pillow lee también .webp.
+    antiguos no tienen las más grandes (maxresdefault, hq720) y dan error 404, que
+    a veces tarda más de un segundo en llegar. Por eso se piden todas A LA VEZ y se
+    elige la mejor que exista (una detrás de otra se iban casi 5 segundos).
+    Pillow lee también .webp.
     """
     thumbs = [t for t in info.get("thumbnails") or [] if t.get("url")]
     # yt-dlp las ordena de peor a mejor según su preferencia.
     thumbs.sort(key=lambda t: (t.get("preference") or 0, t.get("width") or 0))
-    for thumb in list(reversed(thumbs))[:intentos]:
-        data = fetch_image(thumb["url"])
+    candidatas = list(reversed(thumbs))[:intentos]
+    if not candidatas:
+        return None
+    with ThreadPoolExecutor(max_workers=len(candidatas)) as hilos:
+        imagenes = list(hilos.map(lambda t: fetch_image(t["url"]), candidatas))
+    for data in imagenes:          # en orden, de la mejor a la peor
         if data:
             try:
                 return prepare_cover(data)
