@@ -32,7 +32,7 @@
   - **El álbum original y su portada**: busca en qué disco salió la canción (por ejemplo, *Thriller*, 1982) y le pone la portada de ese disco, en vez de un fotograma del vídeo.
   - **La letra de cada canción**, dentro del archivo: el iPod la muestra al pulsar el botón central. Si tu reproductor lo admite, también puede guardar un `.lrc` con la letra sincronizada, que va apareciendo a la vez que suena.
   - Todas las canciones juntas en una carpeta, con nombres ordenados: `Artista - Título.mp3`.
-  - Títulos limpios, sin «(Official Video)», «(Lyrics)», «(Remastered 2011)» y demás relleno, pero conservando «(feat. …)», «(Live)» o «(Remix)».
+  - Títulos limpios, sin «(Official Video)», «(Lyrics)», «(Remastered 2011)» y demás relleno, pero conservando «(feat. …)», «(Live)» o «(Remix)». Y sin TODO EN MAYÚSCULAS: el iPod trataría «BAD BUNNY» y «Bad Bunny» como dos artistas distintos.
 - 🎚 **Calidad a elegir**: MP3 V0 (recomendado), MP3 320 kbps o M4A original sin pérdidas extra.
 - 🔔 **Te avisa cuando hay una versión nueva**, y en Windows y Linux se actualiza con un clic.
 

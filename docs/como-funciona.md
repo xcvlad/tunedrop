@@ -155,6 +155,8 @@ La letra se busca **a la vez** que ffmpeg convierte el audio, así que no hace e
 
 El año es el de la **primera edición** del disco, y la portada sale de su archivo de carátulas, [Cover Art Archive](https://coverartarchive.org). El número de pista no se toma de aquí, porque cambia en cada edición. Si hay dudas o MusicBrainz no responde, la canción se queda con los datos del vídeo: mejor nada que un disco equivocado.
 
+Si la encuentra, además, el artista y el título pasan a escribirse como en MusicBrainz, pero solo si son las mismas palabras y cambian las mayúsculas o las tildes: «BAD BUNNY - TITI ME PREGUNTO» queda «Bad Bunny - Tití me preguntó». Así todas las canciones de un artista llevan el nombre escrito igual y el iPod no lo separa en dos. Si no la encuentra, un nombre o título entero en mayúsculas y de varias palabras pasa a «Bad Bunny» (los de una palabra, como ABBA o BTS, se dejan).
+
 MusicBrainz solo acepta una consulta por segundo desde el mismo ordenador, así que, si se descargan varias canciones a la vez, las consultas esperan su turno.
 
 ### ¿Cómo sabe si hay una versión nueva?
