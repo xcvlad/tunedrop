@@ -25,6 +25,7 @@ tunedrop/
 │   ├── __init__.py           ←   Nombre y versión de la app
 │   ├── __main__.py           ←   Punto de arranque (abre la ventana)
 │   ├── comprobar.py          ←   Autodiagnóstico: tunedrop.exe --comprobar
+│   ├── idioma.py             ←   Español o inglés: todos los textos traducidos
 │   ├── assets/icono.png      ←   Icono de la ventana
 │   │
 │   ├── core/                 ←   El «motor»: hace el trabajo, sin ventanas
@@ -54,14 +55,17 @@ tunedrop/
 │       ├── theme.py          ←     Colores y estilo (tema oscuro)
 │       └── icons.py          ←     Iconos dibujados con código (SVG)
 │
-├── tests/test_core.py        ← Pruebas automáticas del motor
+├── tests/                    ← PRUEBAS AUTOMÁTICAS
+│   ├── test_core.py          ←   Del motor
+│   ├── test_idioma.py        ←   De los idiomas (y que no falte ninguna traducción)
+│   └── conftest.py           ←   Preparación común: los tests van en español
 │
 ├── packaging/                ← CÓMO SE CREA EL PROGRAMA (Windows y Linux)
 │   ├── build.py              ←   Script que lo hace todo, paso a paso
 │   ├── lanzador.py           ←   Arranque del .exe
 │   ├── instalador.iss        ←   Receta del instalador (Inno Setup)
 │   ├── instalador-*.png      ←   Imágenes de la ventana del instalador
-│   ├── pantalla-carga.png    ←   Lo primero que sale al abrir el programa («Abriendo tunedrop…»)
+│   ├── pantalla-carga.png    ←   Lo primero que sale al abrir el programa (sin texto: vale para los dos idiomas)
 │   ├── crear_imagenes.py     ←   Dibuja esas imágenes (solo para cambiar el diseño)
 │   ├── descargar_ffmpeg.py   ←   Descarga ffmpeg en bin/
 │   └── icono.ico             ←   Icono del .exe
@@ -164,6 +168,14 @@ MusicBrainz solo acepta una consulta por segundo desde el mismo ordenador, así 
 Al abrirse, `updates.py` pide a GitHub la página `releases/latest`, que siempre **redirige** a la última versión publicada (por ejemplo, `.../releases/tag/v0.4.0`), y se queda con el final. No usa la API de GitHub, que solo deja hacer 60 consultas por hora desde la misma red.
 
 Si hay una más nueva, `update_banner.py` muestra el aviso. Actualizar es lo mismo que volver a ejecutar el comando de instalar. En Windows, la app abre PowerShell con ese comando y se cierra, para que el instalador pueda reemplazar sus archivos. En Linux, lo ejecuta en segundo plano y después ofrece reiniciar. Con NixOS, el `.zip` o desde el código, solo explica qué hacer.
+
+### ¿Cómo cambia de idioma?
+
+En el código, cada texto que se ve en pantalla está escrito en español dentro de `tr()`: `tr("Buscar")`. Esa función, de `idioma.py`, busca el texto en un diccionario, `INGLES`, donde cada texto en español tiene al lado su traducción, y devuelve el que toca: «Buscar» o «Search». Los textos con datos llevan huecos entre llaves, `tr("{n} canciones", n=3)`, que se rellenan después de traducir, para que el inglés pueda ponerlos en otro orden. Un test (`tests/test_idioma.py`) recorre todo el código y avisa si algún `tr()` no tiene traducción.
+
+El idioma elegido se guarda en `idioma.txt`, en la misma carpeta que tus ajustes, y solo contiene `es` o `en`. Va en un archivo aparte y tan sencillo para que lo puedan escribir con una línea los tres instaladores: `windows.ps1` (PowerShell), `linux.sh` (bash) y el `setup.exe` (Inno Setup). Los instaladores preguntan solo la primera vez; si no hay `idioma.txt`, la app usa el idioma del sistema.
+
+Los textos se escriben al crear la ventana, así que al cambiar de idioma en *Ajustes* la app se cierra y se vuelve a abrir sola (como al actualizar en Linux). Los botones que pone el propio Qt (Sí, No, Cancelar…) se traducen con sus propios archivos de traducción, que vienen con PySide6.
 
 ## Glosario
 

@@ -35,10 +35,11 @@
   - Títulos limpios, sin «(Official Video)», «(Lyrics)», «(Remastered 2011)» y demás relleno, pero conservando «(feat. …)», «(Live)» o «(Remix)». Y sin TODO EN MAYÚSCULAS: el iPod trataría «BAD BUNNY» y «Bad Bunny» como dos artistas distintos.
 - 🎚 **Calidad a elegir**: MP3 V0 (recomendado), MP3 320 kbps o M4A original sin pérdidas extra.
 - 🔔 **Te avisa cuando hay una versión nueva**, y en Windows y Linux se actualiza con un clic.
+- 🌍 **En español o en inglés**: lo eliges al instalar y lo cambias cuando quieras en *Ajustes*.
 
 ## Instalar
 
-Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Mientras trabaja, te enseña cada paso con una barra de progreso. Para actualizar, pulsa **Actualizar** en el aviso que sale en la app cuando hay una versión nueva, o vuelve a ejecutar el comando.
+Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. La primera vez te pregunta el idioma (español o inglés; ya sale marcado el de tu sistema, así que basta con pulsar Intro). Mientras trabaja, te enseña cada paso con una barra de progreso. Para actualizar, pulsa **Actualizar** en el aviso que sale en la app cuando hay una versión nueva, o vuelve a ejecutar el comando.
 
 ### Windows
 
@@ -47,7 +48,8 @@ Se instala con **un solo comando**. No necesitas Python ni nada más: el comando
    ```powershell
    irm https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/windows.ps1 | iex
    ```
-3. Espera a que diga **Listo**. tunedrop aparece en el menú Inicio y en el escritorio.
+3. Elige el idioma: `1` español o `2` inglés.
+4. Espera a que diga **Listo**. tunedrop aparece en el menú Inicio y en el escritorio.
 
 Para desinstalarlo: *Configuración → Aplicaciones → tunedrop → Desinstalar*.
 
@@ -76,12 +78,15 @@ Funciona en cualquier distribución: Ubuntu, Debian, Linux Mint, Fedora, Arch, o
    ```bash
    curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash
    ```
-3. Espera a que diga **Listo**. tunedrop aparece en el menú de aplicaciones, y también se abre escribiendo `tunedrop`.
+3. Elige el idioma: `1` español o `2` inglés.
+4. Espera a que diga **Listo**. tunedrop aparece en el menú de aplicaciones, y también se abre escribiendo `tunedrop`.
 
 Para desinstalarlo:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash -s -- --desinstalar
 ```
+
+> Para elegir el idioma sin que pregunte (por ejemplo, en un script), pon `TUNEDROP_IDIOMA=en` (o `es`) delante de `bash`: `curl -fsSL … | TUNEDROP_IDIOMA=en bash`.
 
 > El programa lleva dentro casi todo lo que necesita. Si a tu sistema le falta alguna librería (suelen ser las de gráficos, en instalaciones mínimas), el instalador te dice cuál, te da el comando para tu distribución y te ofrece instalarla. Funciona en Ubuntu 22.04, Linux Mint 21, Debian 12, Fedora 36 o más nuevos; con uno más antiguo, el instalador te avisa antes de descargar nada.
 
@@ -113,6 +118,8 @@ Para actualizarlo: `nix flake update tunedrop` en la carpeta de tu configuració
 
 **Solo para tu usuario**, sin tocar la configuración: `nix profile install github:xcvlad/tunedrop` (para actualizar: `nix profile upgrade tunedrop`).
 
+Con Nix no hay instalador que pregunte el idioma: la app sale en el de tu sistema (español si lo tienes en español; si no, inglés), y lo puedes cambiar en *Ajustes*.
+
 > Si Nix responde que `nix-command` o `flakes` son *experimental features*, añade `--extra-experimental-features 'nix-command flakes'` justo después de `nix` en cada comando.
 
 </details>
@@ -123,6 +130,8 @@ Para actualizarlo: `nix flake update tunedrop` en la carpeta de tu configuració
 2. Si dudas de cuál es la buena, pulsa **▶** sobre la miniatura para escucharla (■ para parar).
 3. Pulsa **+** en las que quieras.
 4. Pulsa **Descargar**. Las canciones aparecen en tu carpeta de música, dentro de `tunedrop`, con el nombre `Artista - Título.mp3`.
+
+Para cambiar el idioma, abre *Ajustes* (⚙) y elige en **Idioma · Language**. tunedrop se reinicia para aplicarlo.
 
 > Pegar en la terminal un comando de internet es cómodo, pero solo debes hacerlo si confías en quien lo publica. Puedes leer antes lo que hace cada script: [`instalar/windows.ps1`](instalar/windows.ps1), [`instalar/linux.sh`](instalar/linux.sh) y [`flake.nix`](flake.nix). Y si quieres comprobar que el programa descargado es legítimo, mira [¿Es fiable?](#es-fiable).
 
