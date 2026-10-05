@@ -51,8 +51,11 @@ WizardSmallImageFile=instalador-icono.png
 DisableWelcomePage=no
 
 [Languages]
-Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
+; Al abrirse, el instalador pregunta el idioma (sale marcado el de Windows; si
+; no es ninguno de estos, el primero: inglés). Ese idioma será también el de la
+; app: lo guarda la sección [Code] de abajo.
 Name: "en"; MessagesFile: "compiler:Default.isl"
+Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
 
 [Messages]
 ; Textos propios en vez de los genéricos de Inno Setup. «%n» es un salto de línea.
@@ -78,3 +81,20 @@ Name: "{autodesktop}\tunedrop"; Filename: "{app}\tunedrop.exe"; Tasks: desktopic
 
 [Run]
 Filename: "{app}\tunedrop.exe"; Description: "{cm:LaunchProgram,tunedrop}"; Flags: nowait postinstall skipifsilent
+
+[Code]
+// El idioma elegido en el instalador («es» o «en») se guarda en idioma.txt, en
+// la carpeta de configuración de tunedrop (%APPDATA%\tunedrop), que es donde la
+// app lo busca al abrirse (ver tunedrop/idioma.py). Luego se puede cambiar en
+// los Ajustes de la app.
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  Carpeta: String;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    Carpeta := ExpandConstant('{userappdata}\tunedrop');
+    ForceDirectories(Carpeta);
+    SaveStringToFile(Carpeta + '\idioma.txt', ActiveLanguage(), False);
+  end;
+end;

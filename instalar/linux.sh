@@ -6,6 +6,8 @@
 #      curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash
 #
 #  Qué hace:
+#  0. La primera vez, pregunta el idioma (español o inglés): el de este
+#     instalador y el de la app.
 #  1. Busca la última versión publicada en GitHub (Releases).
 #  2. Descarga el programa ya compilado (no necesitas Python).
 #  3. Lo guarda en ~/.local/share/tunedrop, solo para tu usuario (sin sudo).
@@ -13,7 +15,10 @@
 #
 #  En NixOS no instala nada: explica cómo hacerlo con Nix (flake.nix).
 #
-#  Volver a ejecutarlo actualiza a la última versión.
+#  Volver a ejecutarlo actualiza a la última versión (sin volver a preguntar
+#  el idioma: el idioma se cambia en los Ajustes de la app).
+#  Para elegir el idioma sin que pregunte, pon TUNEDROP_IDIOMA=es (o en) delante
+#  de «bash»:  curl -fsSL ... | TUNEDROP_IDIOMA=en bash
 #  Para desinstalar:
 #      curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash -s -- --desinstalar
 # ============================================================
@@ -25,6 +30,9 @@ DESTINO="$DATOS/tunedrop"                         # aquí va el programa
 MENU="$DATOS/applications/tunedrop.desktop"       # acceso en el menú de aplicaciones
 COMANDO="$HOME/.local/bin/tunedrop"               # para abrirlo escribiendo «tunedrop»
 TEMPORAL=""                                       # carpeta de trabajo (se crea más abajo)
+# El idioma elegido se guarda donde lo busca la app (ver tunedrop/idioma.py).
+ARCHIVO_IDIOMA="${XDG_CONFIG_HOME:-$HOME/.config}/tunedrop/idioma.txt"
+IDIOMA="es"                                       # «es» o «en» (se decide más abajo)
 
 # ============================================================
 #  Aspecto: colores, símbolos y dibujos de la terminal
@@ -96,6 +104,57 @@ LOGO=(
 )
 ANCHOS=(9 9 10 8 8 8 9 8)    # T U N E D R O P
 
+# ============================================================
+#  Idioma: español o inglés
+# ============================================================
+
+# Cada texto va en los dos idiomas, y «t» escribe el que toca:
+#   t "Instalando" "Installing"   ->  «Instalando» o «Installing»
+t() {
+    if [ "$IDIOMA" = "en" ]; then printf '%s' "$2"; else printf '%s' "$1"; fi
+}
+
+# Decide el idioma de este instalador y de la app. Por orden:
+# 1. La variable TUNEDROP_IDIOMA (la pone la app al actualizarse).
+# 2. El que ya se eligió antes: idioma.txt (lo escribe también la app en Ajustes).
+# 3. Si no hay ninguno y se llama con «preguntar», se pregunta, con el idioma
+#    del sistema ya marcado (basta con pulsar Intro). Sin nadie delante (sin
+#    terminal), se usa el del sistema.
+elegir_idioma() {
+    local elegido="${TUNEDROP_IDIOMA:-}" marcado respuesta=""
+    if [ -z "$elegido" ] && [ -f "$ARCHIVO_IDIOMA" ]; then
+        elegido=$(tr -d ' \r\n' <"$ARCHIVO_IDIOMA" | tr '[:upper:]' '[:lower:]') || elegido=""
+    fi
+    case "$elegido" in
+        es | en) IDIOMA=$elegido; return 0 ;;
+    esac
+    # El idioma del sistema sale de estas variables (valen cosas como «es_ES.UTF-8»).
+    case "${LANGUAGE:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}" in
+        es*) IDIOMA="es" marcado=1 ;;
+        *) IDIOMA="en" marcado=2 ;;
+    esac
+    # La respuesta se lee de la terminal (/dev/tty), porque este script llega por «curl | bash».
+    if [ "${1:-}" = "preguntar" ] && { true </dev/tty; } 2>/dev/null; then
+        printf '  Idioma / Language\n\n'
+        printf '    %s1%s  Español\n' "$VIOLETA" "$NORMAL"
+        printf '    %s2%s  English\n\n' "$VIOLETA" "$NORMAL"
+        if [ "$BONITO" = 1 ]; then printf '\033[?25h'; fi    # cursor visible para escribir
+        printf '  1 / 2 [%s] ' "$marcado"
+        read -r respuesta </dev/tty || respuesta=""
+        if [ "$BONITO" = 1 ]; then printf '\033[?25l'; fi
+        echo
+        case "$respuesta" in
+            1) IDIOMA="es" ;;
+            2) IDIOMA="en" ;;
+        esac                                 # cualquier otra cosa: el marcado
+    fi
+}
+
+# Guarda el idioma para la app.
+guardar_idioma() {
+    mkdir -p "$(dirname "$ARCHIVO_IDIOMA")" && printf '%s\n' "$IDIOMA" >"$ARCHIVO_IDIOMA"
+}
+
 # Escribe el texto $1 repetido $2 veces.
 repetir() {
     local texto="" k
@@ -120,7 +179,12 @@ mostrar_logo() {
         # Ventana estrecha: el logo grande no cabría y se descolocaría.
         printf '  %s%s t u n e d r o p %s\n' "$NEGRITA" "${COLORES[0]}" "$NORMAL"
     fi
-    printf '\n  %s%s  Tu música en MP3, lista para tu reproductor o iPod%s\n\n' "$TENUE" "$NOTA" "$NORMAL"
+    echo
+}
+
+mostrar_lema() {
+    printf '  %s%s  %s%s\n\n' "$TENUE" "$NOTA" \
+        "$(t "Tu música en MP3, lista para tu reproductor o iPod" "Your music as MP3, ready for your player or iPod")" "$NORMAL"
 }
 
 # Línea de un paso terminado:  ✔ Texto  detalle
@@ -189,13 +253,14 @@ descargar() {
                     "$VIOLETA" "$(repetir "$BARRA" "$llenos")" "$GRIS" "$(repetir "$BARRA" $((30 - llenos)))" "$NORMAL" \
                     $((bajado * 100 / total)) "$TENUE" $((bajado / 1048576)) $((total / 1048576)) "$NORMAL"
             else
-                printf '%s  %s%s%s  Descargando  %s%d MB%s' "$BORRAR_LINEA" \
-                    "$VIOLETA" "${GIRO[i++ % ${#GIRO[@]}]}" "$NORMAL" "$TENUE" $((bajado / 1048576)) "$NORMAL"
+                printf '%s  %s%s%s  %s  %s%d MB%s' "$BORRAR_LINEA" \
+                    "$VIOLETA" "${GIRO[i++ % ${#GIRO[@]}]}" "$NORMAL" "$(t "Descargando" "Downloading")" \
+                    "$TENUE" $((bajado / 1048576)) "$NORMAL"
             fi
             sleep 0.2
         done
     else
-        echo "  Descargando ..."
+        echo "  $(t "Descargando" "Downloading") ..."
     fi
     wait "$pid"
 }
@@ -341,15 +406,30 @@ if [ "$BONITO" = 1 ]; then printf '\033[?25l'; fi
 mostrar_logo
 TEMPORAL=$(mktemp -d)
 
+# NixOS guarda las librerías en otro sitio y el programa compilado no funciona
+# allí. En NixOS, tunedrop se instala con Nix (ver flake.nix en el repositorio).
+ES_NIXOS=0
+if [ -e /etc/NIXOS ] || grep -qs '^ID=nixos' /etc/os-release; then ES_NIXOS=1; fi
+
+# --- 0. Idioma ---------------------------------------------------
+# Solo se pregunta si se va a instalar (no al desinstalar ni en NixOS).
+if [ "${1:-}" != "--desinstalar" ] && [ "$ES_NIXOS" = 0 ]; then
+    elegir_idioma preguntar
+else
+    elegir_idioma
+fi
+mostrar_lema
+
 # ============================================================
 #  Desinstalar
 # ============================================================
 # Solo borra lo que este script creó. Tu música no se toca.
 if [ "${1:-}" = "--desinstalar" ]; then
-    con_espera "Quitando tunedrop" rm -rf "$DESTINO" "$MENU" "$COMANDO"
-    hecho "tunedrop se ha desinstalado"
+    con_espera "$(t "Quitando tunedrop" "Removing tunedrop")" rm -rf "$DESTINO" "$MENU" "$COMANDO"
+    hecho "$(t "tunedrop se ha desinstalado" "tunedrop has been uninstalled")"
     echo
-    caja "$VERDE" "Tu música sigue en su carpeta." "¡Gracias por usar tunedrop!"
+    caja "$VERDE" "$(t "Tu música sigue en su carpeta." "Your music is still in its folder.")" \
+        "$(t "¡Gracias por usar tunedrop!" "Thanks for using tunedrop!")"
     echo
     exit 0
 fi
@@ -358,28 +438,27 @@ fi
 #  Instalar
 # ============================================================
 
-# --- NixOS -------------------------------------------------------
-# NixOS guarda las librerías en otro sitio y el programa compilado no funciona
-# allí. En NixOS, tunedrop se instala con Nix (ver flake.nix en el repositorio).
-if [ -e /etc/NIXOS ] || grep -qs '^ID=nixos' /etc/os-release; then
+# --- NixOS (ver ES_NIXOS, arriba) ---------------------------------
+if [ "$ES_NIXOS" = 1 ]; then
     caja "$VIOLETA" \
-        "$NOTA  Estás en NixOS: allí tunedrop se instala con Nix." \
+        "$NOTA  $(t "Estás en NixOS: allí tunedrop se instala con Nix." "You're on NixOS: there, tunedrop is installed with Nix.")" \
         "" \
-        "   Para instalarlo para siempre, mira la guía:" \
+        "   $(t "Para instalarlo para siempre, mira la guía:" "To install it for good, see the guide:")" \
         "   https://github.com/$REPO#nixos"
     echo
     # El comando va fuera del recuadro para poder copiarlo sin los bordes.
-    echo "  Para probarlo sin instalar nada, copia esta línea:"
+    echo "  $(t "Para probarlo sin instalar nada, copia esta línea:" "To try it without installing anything, copy this line:")"
     echo
     printf '    %s%s%s\n\n' "$NEGRITA" "nix --extra-experimental-features 'nix-command flakes' run github:$REPO" "$NORMAL"
     exit 0
 fi
 
 # --- Comprobaciones --------------------------------------------
-command -v curl >/dev/null || fallo "Hace falta curl." "Instálalo con: sudo apt install curl (o el gestor de tu distribución)."
-command -v tar >/dev/null || fallo "Hace falta tar."
-[ "$(uname -m)" = "x86_64" ] || fallo "De momento solo hay versión para PC de 64 bits (x86_64). Tu equipo es $(uname -m)." \
-    "Puedes ejecutarlo desde el código: https://github.com/$REPO#para-programadores"
+command -v curl >/dev/null || fallo "$(t "Hace falta curl." "curl is needed.")" \
+    "$(t "Instálalo con: sudo apt install curl (o el gestor de tu distribución)." "Install it with: sudo apt install curl (or your distribution's package manager).")"
+command -v tar >/dev/null || fallo "$(t "Hace falta tar." "tar is needed.")"
+[ "$(uname -m)" = "x86_64" ] || fallo "$(t "De momento solo hay versión para PC de 64 bits (x86_64). Tu equipo es" "For now there's only a version for 64-bit PCs (x86_64). Yours is") $(uname -m)." \
+    "$(t "Puedes ejecutarlo desde el código:" "You can run it from the source code:") https://github.com/$REPO#para-programadores"
 
 # glibc es la librería básica de Linux, y cada distribución trae la suya. El
 # programa se compila en Ubuntu 22.04 (ver .github/workflows/release.yml) y
@@ -394,9 +473,9 @@ fi
 case "$GLIBC" in
     [0-9]*.[0-9]*)
         if [ "$(printf '%s\n%s\n' "$GLIBC_MINIMA" "$GLIBC" | sort -V | awk 'NR == 1')" != "$GLIBC_MINIMA" ]; then
-            fallo "Tu Linux es demasiado antiguo para esta versión de tunedrop (tiene glibc $GLIBC)." \
-                "Necesita Ubuntu 22.04, Linux Mint 21, Debian 12, Fedora 36 o más nuevos.
-    Otra opción es instalarlo con Nix: https://github.com/$REPO#nixos"
+            fallo "$(t "Tu Linux es demasiado antiguo para esta versión de tunedrop (tiene glibc" "Your Linux is too old for this version of tunedrop (it has glibc") $GLIBC)." \
+                "$(t "Necesita Ubuntu 22.04, Linux Mint 21, Debian 12, Fedora 36 o más nuevos." "It needs Ubuntu 22.04, Linux Mint 21, Debian 12, Fedora 36 or newer.")
+    $(t "Otra opción es instalarlo con Nix:" "Another option is to install it with Nix:") https://github.com/$REPO#nixos"
         fi ;;
 esac
 
@@ -408,22 +487,24 @@ esac
 buscar_version() {
     curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest"
 }
-con_espera "Buscando la última versión" buscar_version || true
+con_espera "$(t "Buscando la última versión" "Looking for the latest version")" buscar_version || true
 FINAL=$(cat "$TEMPORAL/registro.txt")
 ETIQUETA="${FINAL##*/}"          # todo lo que va después de la última «/»
 case "$ETIQUETA" in
     v*) ;;                        # es una versión: seguimos
-    *) fallo "No se encontró ninguna versión publicada." "Comprueba tu conexión o mira https://github.com/$REPO/releases" ;;
+    *) fallo "$(t "No se encontró ninguna versión publicada." "No published version was found.")" \
+        "$(t "Comprueba tu conexión o mira" "Check your connection or see") https://github.com/$REPO/releases" ;;
 esac
 VERSION="${ETIQUETA#v}"          # «v0.1.0» -> «0.1.0»
 ARCHIVO="tunedrop-$VERSION-linux-x86_64.tar.gz"
 URL="https://github.com/$REPO/releases/download/$ETIQUETA/$ARCHIVO"
-hecho "Última versión encontrada" "$ETIQUETA"
+hecho "$(t "Última versión encontrada" "Latest version found")" "$ETIQUETA"
 
 # --- 2. Descargar ------------------------------------------------
 descargar "$URL" "$TEMPORAL/tunedrop.tar.gz" ||
-    fallo "No se pudo descargar $ARCHIVO." "Comprueba tu conexión a internet y vuelve a intentarlo."
-hecho "Descargado" "$(($(wc -c <"$TEMPORAL/tunedrop.tar.gz") / 1048576)) MB"
+    fallo "$(t "No se pudo descargar" "Couldn't download") $ARCHIVO." \
+        "$(t "Comprueba tu conexión a internet y vuelve a intentarlo." "Check your internet connection and try again.")"
+hecho "$(t "Descargado" "Downloaded")" "$(($(wc -c <"$TEMPORAL/tunedrop.tar.gz") / 1048576)) MB"
 
 # --- 3. Instalar (sustituye la versión anterior si la hay) -------
 instalar() {
@@ -434,8 +515,10 @@ instalar() {
         mkdir -p "$(dirname "$DESTINO")" &&
         mv "$TEMPORAL/tunedrop" "$DESTINO"
 }
-con_espera "Instalando" instalar || fallo "El archivo descargado no tiene el formato esperado."
-hecho "Instalado" "${DESTINO/#$HOME/\~}"     # ~ en vez de /home/usuario: más corto
+con_espera "$(t "Instalando" "Installing")" instalar ||
+    fallo "$(t "El archivo descargado no tiene el formato esperado." "The downloaded file doesn't have the expected format.")"
+guardar_idioma || true          # si no se puede guardar, la app usará el del sistema
+hecho "$(t "Instalado" "Installed")" "${DESTINO/#$HOME/\~}"     # ~ en vez de /home/usuario: más corto
 
 # --- 4. Menú de aplicaciones y comando ---------------------------
 # Un archivo .desktop es el «acceso directo» de los escritorios de Linux
@@ -446,7 +529,8 @@ crear_accesos() {
 [Desktop Entry]
 Type=Application
 Name=tunedrop
-Comment=Descarga música en MP3 con título, artista y carátula
+Comment=Download music as MP3 with title, artist and cover art
+Comment[es]=Descarga música en MP3 con título, artista y carátula
 Exec="$DESTINO/tunedrop"
 Icon=$DESTINO/_internal/tunedrop/assets/icono.png
 Terminal=false
@@ -458,8 +542,8 @@ EOF
         update-desktop-database "$(dirname "$MENU")" 2>/dev/null || true
     fi
 }
-con_espera "Añadiendo tunedrop al menú de aplicaciones" crear_accesos
-hecho "Añadido al menú de aplicaciones" "y el comando «tunedrop»"
+con_espera "$(t "Añadiendo tunedrop al menú de aplicaciones" "Adding tunedrop to the applications menu")" crear_accesos
+hecho "$(t "Añadido al menú de aplicaciones" "Added to the applications menu")" "$(t "y el comando «tunedrop»" "and the “tunedrop” command")"
 echo
 
 # --- 5. Librerías del sistema --------------------------------------
@@ -475,7 +559,7 @@ if [ -n "$FALTAN" ]; then
             case " $PAQUETES " in *" $paquete "*) ;; *) PAQUETES="${PAQUETES:+$PAQUETES }$paquete" ;; esac
         fi
     done
-    lineas=("$AVISO  A tu sistema le faltan librerías que tunedrop necesita:" "")
+    lineas=("$AVISO  $(t "A tu sistema le faltan librerías que tunedrop necesita:" "Your system is missing libraries that tunedrop needs:")" "")
     for lib in $FALTAN; do lineas+=("     $lib"); done
     caja "$AMARILLO" "${lineas[@]}"
     echo
@@ -498,8 +582,8 @@ if [ -n "$FALTAN" ]; then
     if [ -n "$ORDEN" ] && [ -z "$DESCONOCIDAS" ] && command -v sudo >/dev/null &&
         { true </dev/tty; } 2>/dev/null; then
         if [ "$BONITO" = 1 ]; then printf '\033[?25h'; fi    # cursor visible para escribir
-        printf '  Se instalan con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN_TEXTO" "$NORMAL"
-        printf '  ¿Las instalo ahora? Te pedirá tu contraseña. [S/n] '
+        printf '  %s  %s%s%s\n\n' "$(t "Se instalan con:" "They're installed with:")" "$NEGRITA" "$ORDEN_TEXTO" "$NORMAL"
+        printf '  %s ' "$(t "¿Las instalo ahora? Te pedirá tu contraseña. [S/n]" "Install them now? It will ask for your password. [Y/n]")"
         read -r respuesta </dev/tty || respuesta="n"
         echo
         case "$respuesta" in
@@ -509,11 +593,11 @@ if [ -n "$FALTAN" ]; then
         echo
     else
         if [ -n "$ORDEN" ]; then
-            printf '  Instálalas con:  %s%s%s\n\n' "$NEGRITA" "$ORDEN_TEXTO" "$NORMAL"
+            printf '  %s  %s%s%s\n\n' "$(t "Instálalas con:" "Install them with:")" "$NEGRITA" "$ORDEN_TEXTO" "$NORMAL"
         fi
         if [ -n "$DESCONOCIDAS" ]; then
-            echo "  Con el gestor de paquetes de tu distribución, busca qué paquete"
-            echo "  contiene cada una de estas:$DESCONOCIDAS"
+            echo "  $(t "Con el gestor de paquetes de tu distribución, busca qué paquete" "With your distribution's package manager, look for the package")"
+            echo "  $(t "contiene cada una de estas:" "that contains each of these:")$DESCONOCIDAS"
             echo
         fi
     fi
@@ -521,7 +605,7 @@ if [ -n "$FALTAN" ]; then
     # ¿Siguen faltando?
     FALTAN=$(librerias_que_faltan) || FALTAN=""
     if [ -z "$FALTAN" ]; then
-        hecho "Librerías del sistema instaladas"
+        hecho "$(t "Librerías del sistema instaladas" "System libraries installed")"
         echo
     fi
 fi
@@ -530,23 +614,23 @@ fi
 # El comando «tunedrop» está en ~/.local/bin. Si esta terminal ya la tiene en el
 # PATH, funciona ya; si no, se añade para las terminales nuevas (anadir_al_path).
 case ":$PATH:" in
-    *":$HOME/.local/bin:"*) PISTA="o escribe en la terminal:  tunedrop" ;;
+    *":$HOME/.local/bin:"*) PISTA=$(t "o escribe en la terminal:  tunedrop" "or type in the terminal:  tunedrop") ;;
     *)
         anadir_al_path
-        PISTA="o abre una terminal nueva y escribe:  tunedrop" ;;
+        PISTA=$(t "o abre una terminal nueva y escribe:  tunedrop" "or open a new terminal and type:  tunedrop") ;;
 esac
 if [ -z "$FALTAN" ]; then
     caja "$VERDE" \
-        "$BIEN  ¡Listo! tunedrop $VERSION está instalado." \
+        "$BIEN  $(t "¡Listo! tunedrop $VERSION está instalado." "Done! tunedrop $VERSION is installed.")" \
         "" \
-        "   Ábrelo desde el menú de aplicaciones" \
+        "   $(t "Ábrelo desde el menú de aplicaciones" "Open it from the applications menu")" \
         "   $PISTA"
 else
     caja "$AMARILLO" \
-        "$AVISO  tunedrop $VERSION está instalado, pero le faltan" \
-        "   las librerías de arriba." \
+        "$AVISO  $(t "tunedrop $VERSION está instalado, pero le faltan" "tunedrop $VERSION is installed, but it's missing")" \
+        "   $(t "las librerías de arriba." "the libraries above.")" \
         "" \
-        "   Cuando las instales, ábrelo desde el menú de aplicaciones" \
+        "   $(t "Cuando las instales, ábrelo desde el menú de aplicaciones" "Once you install them, open it from the applications menu")" \
         "   $PISTA"
 fi
 echo

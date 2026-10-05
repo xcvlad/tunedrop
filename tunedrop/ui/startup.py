@@ -4,6 +4,10 @@
   sale otra; se le pide a la que ya existe que se ponga delante.
 - Pantalla de carga: un recuadro «Abriendo tunedrop…» que aparece enseguida,
   mientras se prepara la ventana principal, para que se vea que está en marcha.
+- Idioma: los textos que pone Qt (botones Sí/No, el selector de carpetas…) en
+  el idioma de la app (ver tunedrop/idioma.py).
+- Reiniciar: al cambiar de idioma o al actualizar en Linux, la app se cierra y
+  se vuelve a abrir sola.
 
 Por qué tarda en abrirse: el programa ocupa cientos de MB (Python, Qt, ffmpeg,
 Deno) y, al abrirlo, Windows y el antivirus revisan sus archivos. Por eso
@@ -13,13 +17,20 @@ yt-dlp, que también tarda en cargarse, no se carga hasta que la ventana ya se v
 from __future__ import annotations
 
 import getpass
+import os
+import subprocess
+import sys
 import threading
+from pathlib import Path
 
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtWidgets import QSplashScreen, QWidget
+from PySide6.QtWidgets import QApplication, QSplashScreen, QWidget
 
+from .. import idioma
+from ..core import updates
+from ..idioma import tr
 from . import theme
 
 # La misma lista de letras que theme.py: Segoe en Windows; Inter, Cantarell,
@@ -117,7 +128,7 @@ def splash_screen(icon_path: str) -> QSplashScreen:
     texto.setFamilies(LETRAS)
     texto.setPixelSize(14)
     p.setFont(texto)
-    p.drawText(QRectF(108, 62, ancho - 120, 24), Qt.AlignmentFlag.AlignVCenter, "Abriendo tunedrop…")
+    p.drawText(QRectF(108, 62, ancho - 120, 24), Qt.AlignmentFlag.AlignVCenter, tr("Abriendo tunedrop…"))
     p.end()
 
     splash = QSplashScreen(imagen)
@@ -129,3 +140,49 @@ def preload_in_background() -> None:
     """Carga yt-dlp en segundo plano cuando la ventana ya se ve, para que la
     primera búsqueda no tenga que esperarlo."""
     threading.Thread(target=lambda: __import__("yt_dlp"), daemon=True).start()
+
+
+def load_qt_translations(app: QApplication) -> None:
+    """Los textos que pone el propio Qt (los botones Sí y No de las preguntas,
+    el selector de carpetas…) en el idioma de la app. Qt trae sus traducciones
+    en archivos .qm; en inglés no hace falta ninguna. Si no las encuentra, esos
+    botones salen en inglés, sin más."""
+    if idioma.actual() != "es":
+        return
+    from PySide6.QtCore import QLibraryInfo, QTranslator
+
+    traductor = QTranslator(app)   # con la app de «padre», vive lo mismo que ella
+    carpeta = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    if traductor.load("qtbase_es", carpeta):
+        app.installTranslator(traductor)
+
+
+def request_restart(window: QWidget) -> None:
+    """Cierra la app y la vuelve a abrir. Si hay descargas, la ventana pregunta
+    antes de cerrarse; si se decide no cerrar, no se reinicia."""
+    app = QApplication.instance()
+    app.setProperty("reiniciar", True)
+    if not window.close():
+        app.setProperty("reiniciar", False)
+
+
+def restart_if_requested() -> None:
+    """Abre otra vez tunedrop si se pidió reiniciar. La llama __main__.py al
+    cerrarse la app (después de cerrar el buzón de SingleInstance: si no, la
+    nueva creería que ya hay una tunedrop abierta y se cerraría)."""
+    app = QApplication.instance()
+    if app is None or not app.property("reiniciar"):
+        return
+    env = updates.clean_environment()
+    if getattr(sys, "frozen", False):
+        orden = [sys.executable]          # el programa compilado (tunedrop.exe)
+    else:
+        # Desde el código o con Nix: «python -m tunedrop», con las mismas carpetas
+        # de librerías que esta (Nix las añade al arrancar, no en el entorno).
+        orden = [sys.executable, "-m", "tunedrop"]
+        carpetas = [str(Path(__file__).resolve().parents[2]), *(p for p in sys.path if p)]
+        env["PYTHONPATH"] = os.pathsep.join(carpetas)
+    try:
+        subprocess.Popen(orden, env=env, start_new_session=True)
+    except OSError:
+        pass   # no se pudo: se abre a mano, como siempre

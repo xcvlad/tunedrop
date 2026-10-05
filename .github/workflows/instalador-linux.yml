@@ -57,6 +57,7 @@ jobs:
             antigua: true
     env:
       SHELL: /bin/bash          # como en un escritorio normal
+      TUNEDROP_IDIOMA: es       # los textos que se buscan con grep están en español
     defaults:
       run:
         shell: bash
@@ -120,3 +121,11 @@ jobs:
       - name: 6. El comando «tunedrop» existe en una terminal nueva
         if: ${{ !matrix.antigua }}
         run: bash -ic 'command -v tunedrop'
+
+      - name: 7. En inglés - los textos salen en inglés y el idioma se guarda para la app
+        if: ${{ !matrix.antigua }}
+        run: |
+          TUNEDROP_IDIOMA=en bash instalar/linux.sh > salida3.txt 2>&1
+          cat salida3.txt
+          grep -q "Done!" salida3.txt
+          test "$(cat "$HOME/.config/tunedrop/idioma.txt")" = en

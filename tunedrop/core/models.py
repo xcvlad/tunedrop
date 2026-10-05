@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from ..idioma import tr
+
 
 class AudioFormat(str, Enum):
     """Formatos de salida. El valor es lo que se guarda en la configuración."""
@@ -14,9 +16,9 @@ class AudioFormat(str, Enum):
     @property
     def label(self) -> str:
         return {
-            AudioFormat.MP3_V0: "MP3 V0 (~245 kbps VBR) · recomendado",
+            AudioFormat.MP3_V0: tr("MP3 V0 (~245 kbps VBR) · recomendado"),
             AudioFormat.MP3_320: "MP3 320 kbps CBR",
-            AudioFormat.M4A: "M4A/AAC original · sin recodificar",
+            AudioFormat.M4A: tr("M4A/AAC original · sin recodificar"),
         }[self]
 
     @property

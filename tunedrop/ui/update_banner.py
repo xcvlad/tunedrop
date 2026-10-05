@@ -15,15 +15,15 @@ nueva, aparece esta franja con tres botones:
 from __future__ import annotations
 
 import subprocess
-import sys
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QApplication, QFrame, QHBoxLayout, QLabel, QPushButton
 
-from .. import __version__
+from .. import __version__, idioma
 from ..core import updates
-from . import icons, theme
+from ..idioma import tr
+from . import icons, startup, theme
 
 
 class _Signals(QObject):
@@ -49,9 +49,11 @@ class _Task(QRunnable):
 
 def _update_linux() -> bool:
     """Vuelve a ejecutar el comando de instalar de Linux. True si ha ido bien."""
+    # TUNEDROP_IDIOMA: el instalador usa el idioma de la app y no pregunta.
+    env = {**updates.clean_environment(), "TUNEDROP_IDIOMA": idioma.actual()}
     resultado = subprocess.run(
         ["bash", "-c", f"curl -fsSL {updates.INSTALAR_LINUX} | bash"],
-        capture_output=True, text=True, timeout=900, env=updates.clean_environment(),
+        capture_output=True, text=True, timeout=900, env=env,
     )
     return resultado.returncode == 0
 
@@ -68,16 +70,16 @@ class UpdateBanner(QFrame):
         icono.setPixmap(icons.pixmap("download", 18, theme.ACCENT_2))
         self.text = QLabel()
         self.text.setWordWrap(True)
-        self.update_btn = QPushButton("Actualizar")
+        self.update_btn = QPushButton(tr("Actualizar"))
         self.update_btn.setObjectName("Primary")
         self.update_btn.clicked.connect(self._update)
-        notes = QPushButton("Novedades")
+        notes = QPushButton(tr("Novedades"))
         notes.setObjectName("Link")
         notes.clicked.connect(self._open_notes)
         close = QPushButton()
         close.setObjectName("Icon")
         close.setIcon(icons.icon("x", 16, theme.MUTED))
-        close.setToolTip("Ocultar hasta la próxima vez")
+        close.setToolTip(tr("Ocultar hasta la próxima vez"))
         close.clicked.connect(self.hide)
 
         fila = QHBoxLayout(self)
@@ -99,7 +101,8 @@ class UpdateBanner(QFrame):
         if not version:
             return
         self.version = version
-        texto = f"<b>Hay una versión nueva de tunedrop: {version}</b> (tienes la {__version__})."
+        texto = tr("<b>Hay una versión nueva de tunedrop: {nueva}</b> (tienes la {tuya}).",
+                   nueva=version, tuya=__version__)
         if self.kind in ("windows", "linux"):
             self.update_btn.show()
         else:
@@ -115,8 +118,9 @@ class UpdateBanner(QFrame):
             self._update_windows()
         elif self.kind == "linux":
             self.update_btn.setEnabled(False)
-            self.update_btn.setText("Actualizando…")
-            self.text.setText(f"<b>Instalando tunedrop {self.version}…</b> Puedes seguir usando la app.")
+            self.update_btn.setText(tr("Actualizando…"))
+            self.text.setText(tr("<b>Instalando tunedrop {version}…</b> Puedes seguir usando la app.",
+                                 version=self.version))
             self._run(_update_linux, self._on_linux_updated)
 
     def _update_windows(self) -> None:
@@ -126,8 +130,11 @@ class UpdateBanner(QFrame):
             return
         # PowerShell en una ventana propia con el comando de instalar de siempre.
         # Al final espera a que pulses Intro, para que se pueda leer si algo falla.
-        comando = (f"irm {updates.INSTALAR_WINDOWS} | iex; Write-Host ''; "
-                   "Read-Host '  Pulsa Intro para cerrar esta ventana'")
+        # TUNEDROP_IDIOMA: el instalador usa el idioma de la app y no pregunta.
+        cerrar = tr("Pulsa Intro para cerrar esta ventana")
+        comando = (f"$env:TUNEDROP_IDIOMA = '{idioma.actual()}'; "
+                   f"irm {updates.INSTALAR_WINDOWS} | iex; Write-Host ''; "
+                   f"Read-Host '  {cerrar}'")
         subprocess.Popen(
             ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", comando],
             creationflags=subprocess.CREATE_NEW_CONSOLE, env=updates.clean_environment(),
@@ -137,19 +144,18 @@ class UpdateBanner(QFrame):
     def _on_linux_updated(self, ok: bool | None) -> None:
         self.update_btn.setEnabled(True)
         if ok:
-            self.text.setText(f"<b>tunedrop {self.version} está instalada.</b> Reinicia la app para usarla.")
-            self.update_btn.setText("Reiniciar")
+            self.text.setText(tr("<b>tunedrop {version} está instalada.</b> Reinicia la app para usarla.",
+                                 version=self.version))
+            self.update_btn.setText(tr("Reiniciar"))
             self.update_btn.clicked.disconnect()
             self.update_btn.clicked.connect(self._restart)
         else:
-            self.update_btn.setText("Reintentar")
-            self.text.setText("<b>No se pudo actualizar.</b> Comprueba tu conexión, o descarga la versión "
-                              "nueva desde la página de novedades.")
+            self.update_btn.setText(tr("Reintentar"))
+            self.text.setText(tr("<b>No se pudo actualizar.</b> Comprueba tu conexión, o descarga la versión "
+                                 "nueva desde la página de novedades."))
 
     def _restart(self) -> None:
-        # __main__.py ve esta marca al cerrarse la app y abre la versión nueva.
-        QApplication.instance().setProperty("reiniciar", True)
-        self.window().close()
+        startup.request_restart(self.window())
 
     # --- Otros ---------------------------------------------------------------------
 
@@ -166,10 +172,3 @@ class UpdateBanner(QFrame):
         if task in self._tasks:
             self._tasks.remove(task)
         on_done(result)
-
-
-def restart_if_requested() -> None:
-    """Abre la tunedrop nueva si se pidió «Reiniciar» (Linux). La llama __main__.py."""
-    app = QApplication.instance()
-    if app is not None and app.property("reiniciar"):
-        subprocess.Popen([sys.executable], env=updates.clean_environment(), start_new_session=True)

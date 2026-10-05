@@ -5,10 +5,10 @@
   barras de ecualizador de adorno.
 - instalador-icono.png: el cuadradito de arriba a la derecha del resto de
   pantallas (el icono de la app con fondo transparente).
-- pantalla-carga.png: el recuadro «Abriendo tunedrop…» que sale nada más hacer
+- pantalla-carga.png: el recuadro «tunedrop • • •» que sale nada más hacer
   clic en el programa, antes incluso de que arranque Python (opción --splash de
   PyInstaller, ver build.py). Sin esquinas redondeadas: en Linux no se pueden
-  hacer transparentes.
+  hacer transparentes. Sin palabras: la misma imagen sirve para los dos idiomas.
 
 Las imágenes ya están creadas en packaging/: este script solo hace falta si
 quieres cambiar el diseño. Uso:  python packaging/crear_imagenes.py
@@ -121,7 +121,8 @@ def imagen_icono() -> Image.Image:
 
 
 def imagen_carga() -> Image.Image:
-    """Recuadro oscuro con el icono, el nombre y «Abriendo tunedrop…» (como la app)."""
+    """Recuadro oscuro con el icono, el nombre y unos puntos de «cargando» (como la app,
+    pero sin texto, porque es la misma imagen en español y en inglés)."""
     ancho, alto = 420, 140
     w, h = ancho * ESCALA, alto * ESCALA
     fondo, borde, texto, apagado = (21, 24, 31), (42, 48, 60), (236, 238, 243), (143, 152, 168)
@@ -133,7 +134,7 @@ def imagen_carga() -> Image.Image:
     lienzo.paste(icono, (30 * ESCALA, 30 * ESCALA), icono)
     d.text((122 * ESCALA, 58 * ESCALA), "tunedrop", font=fuente("segoeuib.ttf", 28 * ESCALA),
            fill=texto, anchor="ls")
-    d.text((123 * ESCALA, 88 * ESCALA), "Abriendo tunedrop…", font=fuente("segoeui.ttf", 16 * ESCALA),
+    d.text((124 * ESCALA, 90 * ESCALA), "•  •  •", font=fuente("segoeuib.ttf", 18 * ESCALA),
            fill=apagado, anchor="ls")
 
     # Línea de abajo con el degradado del icono.

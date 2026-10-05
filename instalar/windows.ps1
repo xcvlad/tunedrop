@@ -5,12 +5,15 @@
 #      irm https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/windows.ps1 | iex
 #
 #  Qué hace:
+#  0. La primera vez, pregunta el idioma (español o inglés): el de este
+#     instalador y el de la app.
 #  1. Busca la última versión publicada en GitHub (Releases).
 #  2. Descarga el instalador tunedrop-X.Y.Z-setup.exe (no necesitas Python).
 #  3. Lo ejecuta sin preguntas: se instala solo para tu usuario, con acceso
 #     en el menú Inicio y en el escritorio.
 #
-#  Volver a ejecutarlo actualiza a la última versión.
+#  Volver a ejecutarlo actualiza a la última versión (sin volver a preguntar
+#  el idioma: el idioma se cambia en los Ajustes de la app).
 #  Para desinstalar: Configuración > Aplicaciones > tunedrop > Desinstalar.
 #
 #  Todo va dentro de una función y se usa «return» en vez de «exit»:
@@ -67,6 +70,11 @@ function Install-Tunedrop {
     # Convierte números Unicode en texto: Simbolos 0x2714 -> "✔"
     function Simbolos { $args | ForEach-Object { [string][char]$_ } }
 
+    # Cada texto va en los dos idiomas, y T elige el que toca:
+    #   T "Instalando" "Installing"   ->  «Instalando» o «Installing»
+    # ($idioma se decide más abajo, en el paso 0.)
+    function T($es, $en) { if ($idioma -eq "en") { $en } else { $es } }
+
     $NOTA = Simbolos 0x266A                                  # ♪
     if ($moderno) {
         $BIEN = Simbolos 0x2714                              # ✔
@@ -118,8 +126,38 @@ function Install-Tunedrop {
             Write-Host "  $($colores[0])t u n e d r o p$NORMAL"
         }
         Write-Host ""
-        Write-Host "  $TENUE$NOTA  Tu musica en MP3, lista para tu reproductor o iPod$NORMAL"
+    }
+
+    function Show-Lema {
+        Write-Host "  $TENUE$NOTA  $(T 'Tu musica en MP3, lista para tu reproductor o iPod' 'Your music as MP3, ready for your player or iPod')$NORMAL"
         Write-Host ""
+    }
+
+    # El idioma de este instalador y de la app: "es" o "en". Por orden:
+    # 1. La variable TUNEDROP_IDIOMA (la pone la app al actualizarse).
+    # 2. El que ya se eligió antes: idioma.txt, en la carpeta de configuración
+    #    de tunedrop. Lo escribe el setup.exe, y la app al cambiarlo en Ajustes.
+    # 3. Si no hay ninguno, se pregunta, con el de Windows ya marcado (basta Intro).
+    function Get-Idioma {
+        $elegido = "$env:TUNEDROP_IDIOMA".Trim().ToLower()
+        if ($elegido -in "es", "en") { return $elegido }
+        try { $elegido = [IO.File]::ReadAllText((Join-Path $env:APPDATA "tunedrop\idioma.txt")).Trim().ToLower() } catch { }
+        if ($elegido -in "es", "en") { return $elegido }
+
+        if ((Get-UICulture).TwoLetterISOLanguageName -eq "es") { $marcado = "1" } else { $marcado = "2" }
+        Write-Host "  Idioma / Language"
+        Write-Host ""
+        Write-Host "    ${VIOLETA}1$NORMAL  Espa$([char]0x00F1)ol"     # 0x00F1 = ñ
+        Write-Host "    ${VIOLETA}2$NORMAL  English"
+        Write-Host ""
+        # Si la ventana no deja escribir (por ejemplo, si nadie la está mirando),
+        # Read-Host falla y se usa el marcado.
+        try { [Console]::CursorVisible = $true } catch { }
+        try { $respuesta = "$(Read-Host "  1 / 2 [$marcado]")".Trim() } catch { $respuesta = "" }
+        try { [Console]::CursorVisible = $false } catch { }
+        Write-Host ""
+        if ($respuesta -in "1", "2") { $marcado = $respuesta }      # cualquier otra cosa: el marcado
+        if ($marcado -eq "2") { return "en" } else { return "es" }
     }
 
     # Línea de un paso terminado:  ✔ Texto  detalle
@@ -159,7 +197,7 @@ function Install-Tunedrop {
             $barra = $VIOLETA + ($LLENO * $llenos) + $GRIS + ($VACIO * (30 - $llenos)) + $NORMAL
             Write-Host -NoNewline "$BORRAR_LINEA  $barra  $porcentaje  $TENUE$mb/$([math]::Floor($total / 1MB)) MB$NORMAL"
         } else {
-            Write-Host -NoNewline "$BORRAR_LINEA  $VIOLETA$($giro[0])$NORMAL  Descargando  $TENUE$mb MB$NORMAL"
+            Write-Host -NoNewline "$BORRAR_LINEA  $VIOLETA$($giro[0])$NORMAL  $(T 'Descargando' 'Downloading')  $TENUE$mb MB$NORMAL"
         }
     }
 
@@ -206,16 +244,28 @@ function Install-Tunedrop {
         # certificado o muy conocidos. tunedrop todavia no esta firmado, asi que lo bloquea
         # sin opcion de "ejecutar de todas formas". No hay nada que el script pueda hacer.
         Write-Host $BORRAR_LINEA -NoNewline
-        Show-Caja $ROJO "$MAL  Windows no deja instalar tunedrop en este ordenador.",
-            "",
-            "   Lo mas probable es que tengas activado el",
-            "   'Control inteligente de aplicaciones' (Smart App Control).",
-            "   Es una proteccion de Windows 11 que solo permite programas",
-            "   con firma digital, y tunedrop aun no la tiene.",
-            "   No es un virus ni un fallo de tu ordenador.",
-            "",
-            "   Mas informacion:",
-            "   https://github.com/xcvlad/tunedrop#smart-app-control"
+        if ($idioma -eq "en") {
+            Show-Caja $ROJO "$MAL  Windows won't let tunedrop be installed on this computer.",
+                "",
+                "   Most likely you have 'Smart App Control' turned on.",
+                "   It's a Windows 11 protection that only allows programs",
+                "   with a digital signature, and tunedrop doesn't have one yet.",
+                "   It's not a virus or a problem with your computer.",
+                "",
+                "   More information:",
+                "   https://github.com/xcvlad/tunedrop#smart-app-control"
+        } else {
+            Show-Caja $ROJO "$MAL  Windows no deja instalar tunedrop en este ordenador.",
+                "",
+                "   Lo mas probable es que tengas activado el",
+                "   'Control inteligente de aplicaciones' (Smart App Control).",
+                "   Es una proteccion de Windows 11 que solo permite programas",
+                "   con firma digital, y tunedrop aun no la tiene.",
+                "   No es un virus ni un fallo de tu ordenador.",
+                "",
+                "   Mas informacion:",
+                "   https://github.com/xcvlad/tunedrop#smart-app-control"
+        }
     }
 
     # ========================================================
@@ -227,6 +277,10 @@ function Install-Tunedrop {
     try { [Console]::CursorVisible = $false } catch { }
     try {
         Show-Logo
+
+        # --- 0. Idioma ---------------------------------------------
+        $idioma = Get-Idioma
+        Show-Lema
 
         # Antes de descargar 115 MB, comprobamos si Smart App Control lo va a bloquear.
         # Su estado se guarda en el registro: 0 = apagado, 1 = activado, 2 = en evaluacion.
@@ -242,7 +296,7 @@ function Install-Tunedrop {
         # .../releases/tag/v0.1.0. Nos quedamos con el final («v0.1.0»).
         # No usamos la API de GitHub porque solo permite 60 consultas por hora
         # desde la misma red (en un aula, varios alumnos se quedarian sin instalar).
-        Show-Espera "Buscando la ultima version" 0
+        Show-Espera (T "Buscando la ultima version" "Looking for the latest version") 0
         try {
             $r = Invoke-WebRequest "https://github.com/$repo/releases/latest" -Method Head -UseBasicParsing
             if ($r.BaseResponse.ResponseUri) { $final = $r.BaseResponse.ResponseUri.AbsoluteUri }      # PowerShell 5
@@ -252,11 +306,12 @@ function Install-Tunedrop {
         }
         $etiqueta = $final.Split("/")[-1]
         if (-not $etiqueta.StartsWith("v")) {
-            Show-Fallo "No se encontro ninguna version publicada." "Comprueba tu conexion o mira https://github.com/$repo/releases"
+            $pista = (T "Comprueba tu conexion o mira" "Check your connection or see") + " https://github.com/$repo/releases"
+            Show-Fallo (T "No se encontro ninguna version publicada." "No published version was found.") $pista
             return
         }
         $archivo = "tunedrop-$($etiqueta.Substring(1))-setup.exe"      # «v0.1.0» -> «tunedrop-0.1.0-setup.exe»
-        Show-Hecho "Ultima version encontrada" $etiqueta
+        Show-Hecho (T "Ultima version encontrada" "Latest version found") $etiqueta
 
         # --- 2. Descargar ------------------------------------------
         $destino = Join-Path $env:TEMP $archivo
@@ -264,21 +319,22 @@ function Install-Tunedrop {
             $bajado = Save-Archivo "https://github.com/$repo/releases/download/$etiqueta/$archivo" $destino
         } catch {
             Remove-Descarga $destino       # por si quedo a medias
-            Show-Fallo "No se pudo descargar $archivo." "Comprueba tu conexion a internet y vuelve a intentarlo."
+            Show-Fallo (T "No se pudo descargar $archivo." "Couldn't download $archivo.") (T "Comprueba tu conexion a internet y vuelve a intentarlo." "Check your internet connection and try again.")
             return
         }
-        Show-Hecho "Descargado" "$([math]::Floor($bajado / 1MB)) MB"
+        Show-Hecho (T "Descargado" "Downloaded") "$([math]::Floor($bajado / 1MB)) MB"
 
         # --- 3. Instalar sin preguntas ------------------------------
-        # Opciones de Inno Setup: /VERYSILENT sin ventanas, /TASKS crea el icono del escritorio.
+        # Opciones de Inno Setup: /VERYSILENT sin ventanas, /TASKS crea el icono del
+        # escritorio y /LANG elige el idioma, que el setup.exe guarda para la app.
         # «finally» se ejecuta siempre, vaya bien o mal: asi el instalador descargado
         # nunca se queda olvidado en la carpeta temporal.
         try {
-            $p = Start-Process $destino -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS="desktopicon"' -PassThru
+            $p = Start-Process $destino -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/TASKS="desktopicon"', "/LANG=$idioma" -PassThru
             $null = $p.Handle     # sin esta linea, PowerShell a veces pierde el codigo de salida
             $i = 0
             while (-not $p.HasExited) {
-                Show-Espera "Instalando" $i
+                Show-Espera (T "Instalando" "Installing") $i
                 $i++
                 Start-Sleep -Milliseconds 100
             }
@@ -292,17 +348,25 @@ function Install-Tunedrop {
             Remove-Descarga $destino
         }
         if ($p.ExitCode -ne 0) {
-            Show-Fallo "El instalador termino con el codigo $($p.ExitCode)."
+            Show-Fallo (T "El instalador termino con el codigo $($p.ExitCode)." "The installer ended with code $($p.ExitCode).")
             return
         }
-        Show-Hecho "Instalado" "en el menu Inicio y en el escritorio"
+        Show-Hecho (T "Instalado" "Installed") (T "en el menu Inicio y en el escritorio" "in the Start menu and on the desktop")
         Write-Host ""
 
         # --- Listo -------------------------------------------------
-        Show-Caja $VERDE "$BIEN  Listo: tunedrop $($etiqueta.Substring(1)) ya esta instalado.",
-            "",
-            "   Se abrira ahora mismo. Las proximas veces, abrelo",
-            "   desde el menu Inicio o el icono del escritorio."
+        $version = $etiqueta.Substring(1)
+        if ($idioma -eq "en") {
+            Show-Caja $VERDE "$BIEN  Done: tunedrop $version is installed.",
+                "",
+                "   It will open right now. Next time, open it",
+                "   from the Start menu or the desktop icon."
+        } else {
+            Show-Caja $VERDE "$BIEN  Listo: tunedrop $version ya esta instalado.",
+                "",
+                "   Se abrira ahora mismo. Las proximas veces, abrelo",
+                "   desde el menu Inicio o el icono del escritorio."
+        }
         $exe = Join-Path $env:LOCALAPPDATA "Programs\tunedrop\tunedrop.exe"
         if (Test-Path $exe) { Start-Process $exe }
     } finally {

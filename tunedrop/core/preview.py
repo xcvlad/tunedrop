@@ -11,6 +11,7 @@ se piden cada vez que se pulsa ▶.
 
 from __future__ import annotations
 
+from ..idioma import tr
 from .models import Track
 from .runtime import base_ydl_options
 from .search import _friendly
@@ -32,6 +33,6 @@ def stream_url(track: Track) -> str:
         raise PreviewError(_friendly(str(exc))) from exc
     url = (info or {}).get("url")
     if not url:
-        raise PreviewError("Esta canción no se puede escuchar desde aquí.")
+        raise PreviewError(tr("Esta canción no se puede escuchar desde aquí."))
     return url
 

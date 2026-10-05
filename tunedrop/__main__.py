@@ -70,6 +70,7 @@ def main() -> int:
     app.setDesktopFileName(APP_NAME)
     app.setStyle("Fusion")
     app.setStyleSheet(theme.STYLESHEET)
+    startup.load_qt_translations(app)
     app.setWindowIcon(QIcon(str(ICONO)))
     window = MainWindow()
     window.show()
@@ -80,13 +81,11 @@ def main() -> int:
     startup.preload_in_background()
     codigo = app.exec()
 
-    # Si se pidió «Reiniciar» tras actualizar (Linux), se abre la versión nueva.
-    # Antes se cierra el buzón de la instancia única: si no, la nueva creería
-    # que ya hay una tunedrop abierta y se cerraría.
-    from .ui.update_banner import restart_if_requested
-
+    # Si se pidió reiniciar (al cambiar de idioma o tras actualizar en Linux), se
+    # vuelve a abrir. Antes se cierra el buzón de la instancia única: si no, la
+    # nueva creería que ya hay una tunedrop abierta y se cerraría.
     instancia.close()
-    restart_if_requested()
+    startup.restart_if_requested()
     return codigo
 
 

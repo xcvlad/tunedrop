@@ -12,6 +12,7 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequ
 from ..core import search as search_mod
 from ..core.downloader import Cancelled, DownloadOptions, Stage, download_track
 from ..core.models import Track
+from ..idioma import tr
 
 
 class _SearchSignals(QObject):
@@ -110,10 +111,10 @@ class _DownloadJob(QRunnable):
                 anio = f" ({result.album.year})" if result.album.year else ""
                 partes.append(f"◉ {result.album.album}{anio}")
             if self.options.lyrics:
-                partes.append("♪ Con letra" if result.lyrics else "Sin letra")
+                partes.append("♪ " + tr("Con letra") if result.lyrics else tr("Sin letra"))
             if result.source_bitrate:
                 codec = (result.source_codec or "").split(".")[0].replace("mp4a", "AAC").upper()
-                partes.append(f"Origen {codec} {round(result.source_bitrate)} kbps")
+                partes.append(tr("Origen {codec} {kbps} kbps", codec=codec, kbps=round(result.source_bitrate)))
             self.signals.finished.emit(self.key, str(result.path), " · ".join(partes))
         except Cancelled:
             self.signals.cancelled.emit(self.key)

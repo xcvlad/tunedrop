@@ -16,6 +16,7 @@ from PySide6.QtCore import QObject, QRunnable, QThreadPool, QUrl, Signal
 
 from ..core.models import Track
 from ..core.preview import stream_url
+from ..idioma import tr
 
 CARGANDO, SONANDO, PARADO, ERROR = "cargando", "sonando", "parado", "error"
 
@@ -97,7 +98,7 @@ class PreviewPlayer(QObject):
             # En Linux, el sonido de Qt necesita algunas librerías del sistema
             # (sobre todo libpulse). El mensaje dice cuál falta: «libpulse.so.0: ...».
             falta = str(exc).split(":")[0]
-            self._set_state(ERROR, f"a tu sistema le falta la librería {falta}, que el sonido necesita.")
+            self._set_state(ERROR, tr("a tu sistema le falta la librería {libreria}, que el sonido necesita.", libreria=falta))
             self.key = None
             return
         player.setSource(QUrl(result))
@@ -132,7 +133,7 @@ class PreviewPlayer(QObject):
     def _on_error(self, error, message: str) -> None:
         if self.key is not None:
             self._player.stop()
-            self._set_state(ERROR, message or "No se pudo reproducir.")
+            self._set_state(ERROR, message or tr("No se pudo reproducir."))
             self.key = None
 
     def _set_state(self, state: str, message: str = "", key: str | None = None) -> None:

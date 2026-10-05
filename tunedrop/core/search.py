@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+from ..idioma import tr
 from .models import Track
 from .runtime import base_ydl_options
 
@@ -97,9 +98,9 @@ def _friendly(message: str) -> str:
     message = message.replace("ERROR:", "").strip()
     message = re.sub(r"^\[[\w:]+\]\s*[\w-]+:\s*", "", message)  # «[youtube] dQw4w9WgXcQ: »
     if "Unsupported URL" in message:
-        return "Ese enlace no es compatible."
+        return tr("Ese enlace no es compatible.")
     if "Private video" in message:
-        return "Ese vídeo es privado."
+        return tr("Ese vídeo es privado.")
     if "Video unavailable" in message or "video is unavailable" in message:
-        return "Ese vídeo no está disponible."
+        return tr("Ese vídeo no está disponible.")
     return message
