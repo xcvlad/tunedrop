@@ -5,15 +5,15 @@
 #      irm https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/windows.ps1 | iex
 #
 #  Qué hace:
-#  0. La primera vez, pregunta el idioma (español o inglés): el de este
-#     instalador y el de la app.
+#  0. Pregunta el idioma (español o inglés): el de este instalador y el de
+#     la app. Sale marcado el que ya tenías (o, la primera vez, el del
+#     sistema), así que para no cambiarlo basta con pulsar Intro.
 #  1. Busca la última versión publicada en GitHub (Releases).
 #  2. Descarga el instalador tunedrop-X.Y.Z-setup.exe (no necesitas Python).
 #  3. Lo ejecuta sin preguntas: se instala solo para tu usuario, con acceso
 #     en el menú Inicio y en el escritorio.
 #
-#  Volver a ejecutarlo actualiza a la última versión (sin volver a preguntar
-#  el idioma: el idioma se cambia en los Ajustes de la app).
+#  Volver a ejecutarlo actualiza a la última versión.
 #  Para desinstalar: Configuración > Aplicaciones > tunedrop > Desinstalar.
 #
 #  Todo va dentro de una función y se usa «return» en vez de «exit»:
@@ -133,18 +133,21 @@ function Install-Tunedrop {
         Write-Host ""
     }
 
-    # El idioma de este instalador y de la app: "es" o "en". Por orden:
-    # 1. La variable TUNEDROP_IDIOMA (la pone la app al actualizarse).
-    # 2. El que ya se eligió antes: idioma.txt, en la carpeta de configuración
-    #    de tunedrop. Lo escribe el setup.exe, y la app al cambiarlo en Ajustes.
-    # 3. Si no hay ninguno, se pregunta, con el de Windows ya marcado (basta Intro).
+    # El idioma de este instalador y de la app: "es" o "en".
+    # - Si existe la variable TUNEDROP_IDIOMA (la pone la app al actualizarse),
+    #   se usa esa y no se pregunta.
+    # - Si no, se pregunta siempre, con uno ya marcado (basta con pulsar Intro):
+    #   el que ya tenías (idioma.txt, en la carpeta de configuración de tunedrop;
+    #   lo escriben el setup.exe y la app al cambiarlo en Ajustes) o, la primera
+    #   vez, el de Windows.
     function Get-Idioma {
         $elegido = "$env:TUNEDROP_IDIOMA".Trim().ToLower()
         if ($elegido -in "es", "en") { return $elegido }
         try { $elegido = [IO.File]::ReadAllText((Join-Path $env:APPDATA "tunedrop\idioma.txt")).Trim().ToLower() } catch { }
-        if ($elegido -in "es", "en") { return $elegido }
-
-        if ((Get-UICulture).TwoLetterISOLanguageName -eq "es") { $marcado = "1" } else { $marcado = "2" }
+        if ($elegido -notin "es", "en") {
+            if ((Get-UICulture).TwoLetterISOLanguageName -eq "es") { $elegido = "es" } else { $elegido = "en" }
+        }
+        if ($elegido -eq "en") { $marcado = "2" } else { $marcado = "1" }
         Write-Host "  Idioma / Language"
         Write-Host ""
         Write-Host "    ${VIOLETA}1$NORMAL  Espa$([char]0x00F1)ol"     # 0x00F1 = ñ

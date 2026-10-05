@@ -6,8 +6,9 @@
 #      curl -fsSL https://raw.githubusercontent.com/xcvlad/tunedrop/main/instalar/linux.sh | bash
 #
 #  Qué hace:
-#  0. La primera vez, pregunta el idioma (español o inglés): el de este
-#     instalador y el de la app.
+#  0. Pregunta el idioma (español o inglés): el de este instalador y el de
+#     la app. Sale marcado el que ya tenías (o, la primera vez, el del
+#     sistema), así que para no cambiarlo basta con pulsar Intro.
 #  1. Busca la última versión publicada en GitHub (Releases).
 #  2. Descarga el programa ya compilado (no necesitas Python).
 #  3. Lo guarda en ~/.local/share/tunedrop, solo para tu usuario (sin sudo).
@@ -15,8 +16,7 @@
 #
 #  En NixOS no instala nada: explica cómo hacerlo con Nix (flake.nix).
 #
-#  Volver a ejecutarlo actualiza a la última versión (sin volver a preguntar
-#  el idioma: el idioma se cambia en los Ajustes de la app).
+#  Volver a ejecutarlo actualiza a la última versión.
 #  Para elegir el idioma sin que pregunte, pon TUNEDROP_IDIOMA=es (o en) delante
 #  de «bash»:  curl -fsSL ... | TUNEDROP_IDIOMA=en bash
 #  Para desinstalar:
@@ -114,25 +114,31 @@ t() {
     if [ "$IDIOMA" = "en" ]; then printf '%s' "$2"; else printf '%s' "$1"; fi
 }
 
-# Decide el idioma de este instalador y de la app. Por orden:
-# 1. La variable TUNEDROP_IDIOMA (la pone la app al actualizarse).
-# 2. El que ya se eligió antes: idioma.txt (lo escribe también la app en Ajustes).
-# 3. Si no hay ninguno y se llama con «preguntar», se pregunta, con el idioma
-#    del sistema ya marcado (basta con pulsar Intro). Sin nadie delante (sin
-#    terminal), se usa el del sistema.
+# Decide el idioma de este instalador y de la app.
+# - Si existe la variable TUNEDROP_IDIOMA (la pone la app al actualizarse), se
+#   usa esa y no se pregunta.
+# - Si no, el que ya tenías (idioma.txt; lo escribe también la app en Ajustes)
+#   o, la primera vez, el del sistema. Si se llama con «preguntar» y hay
+#   alguien delante (una terminal), se pregunta siempre, con ese ya marcado
+#   (basta con pulsar Intro).
 elegir_idioma() {
     local elegido="${TUNEDROP_IDIOMA:-}" marcado respuesta=""
-    if [ -z "$elegido" ] && [ -f "$ARCHIVO_IDIOMA" ]; then
-        elegido=$(tr -d ' \r\n' <"$ARCHIVO_IDIOMA" | tr '[:upper:]' '[:lower:]') || elegido=""
-    fi
     case "$elegido" in
         es | en) IDIOMA=$elegido; return 0 ;;
     esac
-    # El idioma del sistema sale de estas variables (valen cosas como «es_ES.UTF-8»).
-    case "${LANGUAGE:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}" in
-        es*) IDIOMA="es" marcado=1 ;;
-        *) IDIOMA="en" marcado=2 ;;
+    if [ -f "$ARCHIVO_IDIOMA" ]; then
+        elegido=$(tr -d ' \r\n' <"$ARCHIVO_IDIOMA" | tr '[:upper:]' '[:lower:]') || elegido=""
+    fi
+    case "$elegido" in
+        es | en) IDIOMA=$elegido ;;
+        *)
+            # El idioma del sistema sale de estas variables (valen cosas como «es_ES.UTF-8»).
+            case "${LANGUAGE:-${LC_ALL:-${LC_MESSAGES:-${LANG:-}}}}" in
+                es*) IDIOMA="es" ;;
+                *) IDIOMA="en" ;;
+            esac ;;
     esac
+    if [ "$IDIOMA" = "en" ]; then marcado=2; else marcado=1; fi
     # La respuesta se lee de la terminal (/dev/tty), porque este script llega por «curl | bash».
     if [ "${1:-}" = "preguntar" ] && { true </dev/tty; } 2>/dev/null; then
         printf '  Idioma / Language\n\n'

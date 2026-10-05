@@ -39,7 +39,7 @@
 
 ## Instalar
 
-Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. La primera vez te pregunta el idioma (español o inglés; ya sale marcado el de tu sistema, así que basta con pulsar Intro). Mientras trabaja, te enseña cada paso con una barra de progreso. Para actualizar, pulsa **Actualizar** en el aviso que sale en la app cuando hay una versión nueva, o vuelve a ejecutar el comando.
+Se instala con **un solo comando**. No necesitas Python ni nada más: el comando descarga la última versión y la instala como cualquier app, solo para tu usuario y sin permisos de administrador. Te pregunta el idioma (español o inglés; ya sale marcado el que tenías o, la primera vez, el de tu sistema, así que basta con pulsar Intro). Mientras trabaja, te enseña cada paso con una barra de progreso. Para actualizar, pulsa **Actualizar** en el aviso que sale en la app cuando hay una versión nueva, o vuelve a ejecutar el comando.
 
 ### Windows
 
