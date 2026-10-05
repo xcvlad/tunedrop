@@ -18,7 +18,9 @@ from ..core.history import History
 from ..core.models import AudioFormat, Track
 from ..core.runtime import MissingToolError, ffmpeg_path
 from ..core.settings import Settings
-from . import icons, theme
+from .. import idioma
+from ..idioma import tr
+from . import icons, startup, theme
 from .settings_dialog import SettingsDialog
 from .preview_player import PreviewPlayer
 from .update_banner import UpdateBanner
@@ -28,6 +30,11 @@ from .workers import DownloadManager, ThumbnailLoader, start_search
 
 def track_key(track: Track) -> str:
     return History.key(track.source, track.id)
+
+
+def canciones(n: int) -> str:
+    """«1 canción», «3 canciones»."""
+    return tr("{n} canción", n=n) if n == 1 else tr("{n} canciones", n=n)
 
 
 class MainWindow(QMainWindow):
@@ -76,13 +83,13 @@ class MainWindow(QMainWindow):
         logo = QLabel(f'tune<span style="color:{theme.ACCENT_2}">drop</span>')
         logo.setObjectName("Logo")
         logo.setTextFormat(Qt.RichText)
-        tagline = QLabel("Busca, elige y descarga tu música lista para cualquier reproductor")
+        tagline = QLabel(tr("Busca, elige y descarga tu música lista para cualquier reproductor"))
         tagline.setObjectName("Tagline")
         settings_btn = QPushButton()
         settings_btn.setObjectName("Icon")
         settings_btn.setIcon(icons.icon("settings", 20, theme.MUTED))
         settings_btn.setIconSize(settings_btn.iconSize() * 1.1)
-        settings_btn.setToolTip("Ajustes")
+        settings_btn.setToolTip(tr("Ajustes"))
         settings_btn.setCursor(Qt.PointingHandCursor)
         settings_btn.clicked.connect(self._open_settings)
         header = QHBoxLayout()
@@ -103,13 +110,13 @@ class MainWindow(QMainWindow):
         # Buscador
         self.search = QLineEdit()
         self.search.setObjectName("Search")
-        self.search.setPlaceholderText(
+        self.search.setPlaceholderText(tr(
             "Busca una canción o artista… o pega un enlace de YouTube, playlist, SoundCloud, Bandcamp"
-        )
+        ))
         self.search.addAction(icons.icon("search", 18, theme.MUTED), QLineEdit.LeadingPosition)
         self.search.setClearButtonEnabled(True)
         self.search.returnPressed.connect(self._do_search)
-        self.search_btn = QPushButton("Buscar")
+        self.search_btn = QPushButton(tr("Buscar"))
         self.search_btn.setObjectName("Primary")
         self.search_btn.setMinimumHeight(48)
         self.search_btn.setMinimumWidth(120)
@@ -174,10 +181,10 @@ class MainWindow(QMainWindow):
         return lst
 
     def _build_results_panel(self) -> QWidget:
-        panel, layout, head = self._panel("Resultados")
+        panel, layout, head = self._panel(tr("Resultados"))
         self.results_count = QLabel()
         self.results_count.setObjectName("Muted")
-        self.add_all_btn = QPushButton("  Añadir todas")
+        self.add_all_btn = QPushButton("  " + tr("Añadir todas"))
         self.add_all_btn.setIcon(icons.icon("list-plus", 16))
         self.add_all_btn.setCursor(Qt.PointingHandCursor)
         self.add_all_btn.clicked.connect(self._add_all)
@@ -187,10 +194,10 @@ class MainWindow(QMainWindow):
         head.addWidget(self.add_all_btn)
 
         self.results = self._build_list()
-        self.results_empty = QLabel(
+        self.results_empty = QLabel(tr(
             "Escribe arriba lo que quieras escuchar y pulsa Intro.\n\n"
             "También puedes pegar o arrastrar aquí un enlace a un vídeo, una playlist o un álbum."
-        )
+        ))
         self.results_empty.setObjectName("Empty")
         self.results_empty.setAlignment(Qt.AlignCenter)
         self.results_empty.setWordWrap(True)
@@ -200,22 +207,22 @@ class MainWindow(QMainWindow):
         return panel
 
     def _build_queue_panel(self) -> QWidget:
-        panel, layout, head = self._panel("Tu lista")
-        self.clear_done_btn = QPushButton("Limpiar completadas")
+        panel, layout, head = self._panel(tr("Tu lista"))
+        self.clear_done_btn = QPushButton(tr("Limpiar completadas"))
         self.clear_done_btn.setObjectName("Link")
         self.clear_done_btn.setCursor(Qt.PointingHandCursor)
         self.clear_done_btn.clicked.connect(self._clear_finished)
         open_btn = QPushButton()
         open_btn.setObjectName("Icon")
         open_btn.setIcon(icons.icon("folder", 18, theme.MUTED))
-        open_btn.setToolTip("Abrir la carpeta de música")
+        open_btn.setToolTip(tr("Abrir la carpeta de música"))
         open_btn.setCursor(Qt.PointingHandCursor)
         open_btn.clicked.connect(self._open_music_folder)
         head.addWidget(self.clear_done_btn)
         head.addWidget(open_btn)
 
         self.queue = self._build_list()
-        self.queue_empty = QLabel("Pulsa + en las canciones que quieras\ny aparecerán aquí.")
+        self.queue_empty = QLabel(tr("Pulsa + en las canciones que quieras\ny aparecerán aquí."))
         self.queue_empty.setObjectName("Empty")
         self.queue_empty.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.queue_empty, 1)
@@ -228,7 +235,7 @@ class MainWindow(QMainWindow):
         for fmt in AudioFormat:
             self.format_combo.addItem(fmt.label.split(" · ")[0], fmt.value)
         self.format_combo.setCurrentIndex(self.format_combo.findData(self.settings.audio_format))
-        self.format_combo.setToolTip("Formato de salida")
+        self.format_combo.setToolTip(tr("Formato de salida"))
         self.format_combo.currentIndexChanged.connect(self._on_format_changed)
         footer = QHBoxLayout()
         footer.addWidget(self.summary, 1)
@@ -253,10 +260,10 @@ class MainWindow(QMainWindow):
             return
         self._search_token += 1
         self.search_btn.setEnabled(False)
-        self.search_btn.setText("Buscando…")
+        self.search_btn.setText(tr("Buscando…"))
         self.results_count.setText("")
         self.add_all_btn.hide()
-        self._show_results_message("Buscando…" if not search_mod.is_url(text) else "Leyendo el enlace…")
+        self._show_results_message(tr("Buscando…") if not search_mod.is_url(text) else tr("Leyendo el enlace…"))
         start_search(self.search_pool, self._search_token, text,
                      self._on_search_done, self._on_search_failed)
 
@@ -268,7 +275,7 @@ class MainWindow(QMainWindow):
         self.results.clear()
         self._result_cards.clear()
         if not tracks:
-            self._show_results_message("No se encontró nada. Prueba con otras palabras.")
+            self._show_results_message(tr("No se encontró nada. Prueba con otras palabras."))
             return
         for track in tracks:
             card = ResultCard(track)
@@ -286,7 +293,7 @@ class MainWindow(QMainWindow):
         self.results.show()
         self.results.scrollToTop()
         n = len(tracks)
-        self.results_count.setText(f"{n} {'canción' if n == 1 else 'canciones'}")
+        self.results_count.setText(canciones(n))
         self.add_all_btn.setVisible(n > 1)
         # Un enlace a una sola canción se añade directamente: pegar y listo.
         if n == 1 and search_mod.is_url(self.search.text()):
@@ -296,11 +303,11 @@ class MainWindow(QMainWindow):
         if token != self._search_token:
             return
         self._reset_search_button()
-        self._show_results_message(f"No se pudo buscar: {message}")
+        self._show_results_message(tr("No se pudo buscar: {motivo}", motivo=message))
 
     def _reset_search_button(self):
         self.search_btn.setEnabled(True)
-        self.search_btn.setText("Buscar")
+        self.search_btn.setText(tr("Buscar"))
 
     def _show_results_message(self, text: str):
         self.results.hide()
@@ -319,7 +326,8 @@ class MainWindow(QMainWindow):
     def _add_all(self):
         tracks = [c.track for c in self._result_cards.values()]
         added = self._add_tracks(tracks)
-        self._show_toast(f"{added} canciones añadidas a tu lista" if added else "Ya estaban todas en tu lista")
+        self._show_toast(tr("{n} canciones añadidas a tu lista", n=added) if added
+                         else tr("Ya estaban todas en tu lista"))
 
     def _add_tracks(self, tracks: list[Track]) -> int:
         added = 0
@@ -369,22 +377,22 @@ class MainWindow(QMainWindow):
         busy = [c for c in cards if c.is_busy]
         done = [c for c in cards if c.is_finished]
         total = sum(c.track.duration or 0 for c in cards)
-        parts = [f"{len(cards)} {'canción' if len(cards) == 1 else 'canciones'}"]
+        parts = [canciones(len(cards))]
         if total:
             h, m = divmod(total // 60, 60)
             parts.append(f"{h} h {m} min" if h else f"{m} min")
         if done:
-            parts.append(f"{len(done)} listas")
+            parts.append(tr("{n} listas", n=len(done)))
         self.summary.setText(" · ".join(parts) if has else "")
         self.clear_done_btn.setVisible(bool(done))
         if busy and not pending:
-            self.download_btn.setText(f"  Descargando {len(busy)}…")
+            self.download_btn.setText("  " + tr("Descargando {n}…", n=len(busy)))
             self.download_btn.setEnabled(False)
         elif pending:
-            self.download_btn.setText(f"  Descargar ({len(pending)})")
+            self.download_btn.setText("  " + tr("Descargar ({n})", n=len(pending)))
             self.download_btn.setEnabled(True)
         else:
-            self.download_btn.setText("  Descargar")
+            self.download_btn.setText("  " + tr("Descargar"))
             self.download_btn.setEnabled(False)
 
     # ------------------------------------------------------------ descarga --
@@ -434,7 +442,7 @@ class MainWindow(QMainWindow):
         if self.downloads.active_count == 0:
             done = sum(1 for c in self._queue_cards.values() if c.stage is Stage.DONE)
             if done:
-                self._show_toast("Descargas terminadas")
+                self._show_toast(tr("Descargas terminadas"))
 
     def _on_failed(self, key: str, message: str):
         card = self._queue_cards.get(key)
@@ -455,7 +463,7 @@ class MainWindow(QMainWindow):
             ffmpeg_path()
             return True
         except MissingToolError as exc:
-            QMessageBox.warning(self, "Falta ffmpeg", str(exc))
+            QMessageBox.warning(self, tr("Falta ffmpeg"), str(exc))
             return False
 
     def _on_format_changed(self):
@@ -471,6 +479,22 @@ class MainWindow(QMainWindow):
             self.format_combo.blockSignals(True)
             self.format_combo.setCurrentIndex(self.format_combo.findData(self.settings.audio_format))
             self.format_combo.blockSignals(False)
+            nuevo = dialog.chosen_language()
+            if nuevo != idioma.actual():
+                self._change_language(nuevo)
+
+    def _change_language(self, nuevo: str):
+        # Se guarda ya, pero los textos de la ventana se escriben al abrirla:
+        # el idioma nuevo se ve al volver a abrir tunedrop. La pregunta va en
+        # el idioma nuevo, que es el que se acaba de elegir.
+        idioma.guardar_idioma(nuevo)
+        caja = QMessageBox(QMessageBox.Question, tr("Idioma", idioma=nuevo),
+                           tr("tunedrop se verá en español al volver a abrirla.", idioma=nuevo), parent=self)
+        reiniciar = caja.addButton(tr("Reiniciar ahora", idioma=nuevo), QMessageBox.AcceptRole)
+        caja.addButton(tr("Más tarde", idioma=nuevo), QMessageBox.RejectRole)
+        caja.exec()
+        if caja.clickedButton() is reiniciar:
+            startup.request_restart(self)
 
     def _open_music_folder(self):
         folder = Path(self.settings.output_dir)
@@ -479,7 +503,7 @@ class MainWindow(QMainWindow):
 
     def _reveal_file(self, path: str):
         if not Path(path).exists():
-            self._show_toast("Ese archivo ya no existe")
+            self._show_toast(tr("Ese archivo ya no existe"))
             return
         if sys.platform == "win32":
             subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
@@ -502,7 +526,8 @@ class MainWindow(QMainWindow):
             text = (QGuiApplication.clipboard().text() or "").strip()
             if text and text != self._last_clipboard and search_mod.is_url(text) and len(text) < 500:
                 self._last_clipboard = text
-                self.clip_banner.setText(f"  Enlace copiado: {text[:70]}{'…' if len(text) > 70 else ''}  ·  Pulsa para abrirlo")
+                corto = text[:70] + ("…" if len(text) > 70 else "")
+                self.clip_banner.setText("  " + tr("Enlace copiado: {enlace}  ·  Pulsa para abrirlo", enlace=corto))
                 self.clip_banner.setProperty("url", text)
                 self.clip_banner.show()
 
@@ -527,8 +552,8 @@ class MainWindow(QMainWindow):
         busy = sum(1 for c in self._queue_cards.values() if c.is_busy)
         if busy:
             answer = QMessageBox.question(
-                self, "Descargas en curso",
-                f"Hay {busy} descargas en curso. ¿Salir y cancelarlas?",
+                self, tr("Descargas en curso"),
+                tr("Hay {n} descargas en curso. ¿Salir y cancelarlas?", n=busy),
             )
             if answer != QMessageBox.Yes:
                 event.ignore()
@@ -544,7 +569,7 @@ class MainWindow(QMainWindow):
         if card:
             card.set_preview_state(state)
         if state == "error":
-            self._show_toast(f"No se pudo escuchar: {message}", 4500)
+            self._show_toast(tr("No se pudo escuchar: {motivo}", motivo=message), 4500)
 
     def _on_preview_progress(self, key: str, position: int, duration: int):
         card = self._result_cards.get(key)

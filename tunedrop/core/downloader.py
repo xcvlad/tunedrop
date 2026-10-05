@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
+from ..idioma import tr
 from .converter import convert
 from .lyrics import Lyrics, find_lyrics
 from .musicbrainz import AlbumInfo, find_album
@@ -127,7 +128,7 @@ def download_track(
 
         downloaded = next((p for p in workdir.iterdir() if p.stem == "audio"), None)
         if not downloaded:
-            raise RuntimeError("yt-dlp no produjo ningún archivo de audio")
+            raise RuntimeError(tr("yt-dlp no produjo ningún archivo de audio"))
 
         fmt = options.audio_format
         progress(Stage.CONVERTING, 1.0, "")

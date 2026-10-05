@@ -6,6 +6,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ..idioma import tr
 from .models import AudioFormat
 from .runtime import ffmpeg_path
 
@@ -49,5 +50,5 @@ def convert(src: Path, dst: Path, fmt: AudioFormat, normalize: bool = False,
     proc = subprocess.run(cmd, capture_output=True,
                           text=True, creationflags=flags)
     if proc.returncode != 0 or not dst.exists():
-        raise ConversionError(proc.stderr.strip() or "ffmpeg falló sin mensaje")
+        raise ConversionError(proc.stderr.strip() or tr("ffmpeg falló sin mensaje"))
     return dst

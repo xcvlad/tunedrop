@@ -21,6 +21,7 @@ import urllib.request
 from pathlib import Path
 
 from .. import __version__
+from ..idioma import tr
 
 REPO = "xcvlad/tunedrop"
 RELEASES = f"https://github.com/{REPO}/releases"
@@ -94,8 +95,8 @@ def clean_environment() -> dict:
 def update_hint(kind: str) -> str:
     """Qué tiene que hacer la persona cuando la app no puede actualizarse sola."""
     if kind == "nix":
-        return ("Actualízala con «nix profile upgrade tunedrop» o, si está en tu configuración, "
-                "con «nix flake update tunedrop» y reconstruyendo el sistema.")
+        return tr("Actualízala con «nix profile upgrade tunedrop» o, si está en tu configuración, "
+                  "con «nix flake update tunedrop» y reconstruyendo el sistema.")
     if getattr(sys, "frozen", False):
-        return "Descarga la versión nueva desde la página de novedades."
-    return "Actualiza el código con «git pull»."
+        return tr("Descarga la versión nueva desde la página de novedades.")
+    return tr("Actualiza el código con «git pull».")

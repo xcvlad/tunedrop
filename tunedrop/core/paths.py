@@ -6,6 +6,8 @@ import re
 import unicodedata
 from pathlib import Path
 
+from ..idioma import tr
+
 _INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _RESERVED = {
     "CON", "PRN", "AUX", "NUL",
@@ -14,7 +16,7 @@ _RESERVED = {
 }
 MAX_COMPONENT = 100  # por debajo de los 255 de FAT32 para dejar margen a la ruta completa
 
-def sanitize(name: str, fallback: str = "Sin título") -> str:
+def sanitize(name: str, fallback: str | None = None) -> str:
     name = unicodedata.normalize("NFC", name or "")
     name = _INVALID.sub("_", name)
     name = re.sub(r"\s+", " ", name).strip().rstrip(". ")
@@ -22,7 +24,7 @@ def sanitize(name: str, fallback: str = "Sin título") -> str:
         name = f"_{name}"
     if len(name) > MAX_COMPONENT:
         name = name[:MAX_COMPONENT].rstrip(". ")
-    return name or fallback
+    return name or fallback or tr("Sin título")
 
 
 def build_output_path(root: Path, *, artist: str, title: str, extension: str) -> Path:
@@ -31,7 +33,7 @@ def build_output_path(root: Path, *, artist: str, title: str, extension: str) ->
     Formato: «Artista - Título.mp3». Así se ordenan por artista en cualquier explorador
     o reproductor, y el álbum y el número de pista van dentro del archivo, en las etiquetas.
     """
-    name = sanitize(f"{sanitize(artist, 'Desconocido')} - {sanitize(title)}")
+    name = sanitize(f"{sanitize(artist, tr('Desconocido'))} - {sanitize(title)}")
     return root / f"{name}.{extension}"
 
 

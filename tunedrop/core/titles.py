@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+from ..idioma import tr
+
 # Palabras de relleno de los títulos de vídeos musicales. Un paréntesis (o una
 # coletilla del final, tras « - » o « | ») se quita si TODAS sus palabras son de
 # esta lista o años. Así se quitan también las mezclas, como
@@ -106,4 +108,4 @@ def split_artist_title(title: str, channel: str = "") -> tuple[str, str]:
                 return artist, clean_title(song)
     if citado := _CITADO.match(cleaned):
         return citado.group(1).strip(), citado.group(2).strip()
-    return (clean_channel(channel) or "Desconocido"), cleaned
+    return (clean_channel(channel) or tr("Desconocido")), cleaned

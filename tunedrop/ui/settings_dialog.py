@@ -5,20 +5,21 @@ from PySide6.QtWidgets import (
     QLineEdit, QPushButton, QSpinBox, QVBoxLayout,
 )
 
-from .. import __version__
+from .. import __version__, idioma
 from ..core.models import AudioFormat
 from ..core.settings import Settings
+from ..idioma import tr
 
 
 class SettingsDialog(QDialog):
     def __init__(self, settings: Settings, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Ajustes")
+        self.setWindowTitle(tr("Ajustes"))
         self.setMinimumWidth(560)
         self._settings = settings
 
         self.folder = QLineEdit(settings.output_dir)
-        browse = QPushButton("Examinar…")
+        browse = QPushButton(tr("Examinar…"))
         browse.clicked.connect(self._browse)
         folder_row = QHBoxLayout()
         folder_row.addWidget(self.folder, 1)
@@ -29,52 +30,60 @@ class SettingsDialog(QDialog):
             self.format.addItem(fmt.label, fmt.value)
         self.format.setCurrentIndex(self.format.findData(settings.audio_format))
 
-        self.normalize = QCheckBox("Igualar el volumen de todas las canciones (-14 LUFS)")
+        self.normalize = QCheckBox(tr("Igualar el volumen de todas las canciones (-14 LUFS)"))
         self.normalize.setChecked(settings.normalize)
-        self.skip = QCheckBox("No volver a descargar canciones que ya tengo")
+        self.skip = QCheckBox(tr("No volver a descargar canciones que ya tengo"))
         self.skip.setChecked(settings.skip_downloaded)
-        self.lyrics = QCheckBox("Añadir la letra de cada canción")
-        self.lyrics.setToolTip("Va dentro del MP3 o M4A. El iPod la muestra al pulsar el botón central.")
+        self.lyrics = QCheckBox(tr("Añadir la letra de cada canción"))
+        self.lyrics.setToolTip(tr("Va dentro del MP3 o M4A. El iPod la muestra al pulsar el botón central."))
         self.lyrics.setChecked(settings.lyrics)
-        self.lrc = QCheckBox("Guardar también un archivo .lrc con la letra sincronizada")
-        self.lrc.setToolTip(
+        self.lrc = QCheckBox(tr("Guardar también un archivo .lrc con la letra sincronizada"))
+        self.lrc.setToolTip(tr(
             "Un archivo con la letra y el momento en que se canta cada línea, junto a la canción.\n"
-            "Algunos reproductores (Rockbox y muchos MP3) la muestran a la vez que suena.")
+            "Algunos reproductores (Rockbox y muchos MP3) la muestran a la vez que suena."))
         self.lrc.setChecked(settings.lrc_file)
         # El .lrc solo tiene sentido si se buscan las letras.
         self.lrc.setEnabled(settings.lyrics)
         self.lyrics.toggled.connect(self.lrc.setEnabled)
-        self.album = QCheckBox("Buscar el álbum original y la portada del disco")
-        self.album.setToolTip("Nombre del álbum, año de la primera edición y portada, de MusicBrainz.\n"
-                              "Si no lo encuentra, se usan los datos del vídeo.")
+        self.album = QCheckBox(tr("Buscar el álbum original y la portada del disco"))
+        self.album.setToolTip(tr("Nombre del álbum, año de la primera edición y portada, de MusicBrainz.\n"
+                                 "Si no lo encuentra, se usan los datos del vídeo."))
         self.album.setChecked(settings.album_info)
-        self.updates = QCheckBox("Avisar si hay una versión nueva de tunedrop")
-        self.updates.setToolTip("Al abrir la app, pregunta a GitHub cuál es la última versión.")
+        self.updates = QCheckBox(tr("Avisar si hay una versión nueva de tunedrop"))
+        self.updates.setToolTip(tr("Al abrir la app, pregunta a GitHub cuál es la última versión."))
         self.updates.setChecked(settings.check_updates)
         self.concurrent = QSpinBox()
         self.concurrent.setRange(1, 6)
         self.concurrent.setValue(settings.concurrent)
 
+        # Idioma: cada uno escrito en su idioma, para que lo encuentre quien no
+        # entienda el que está puesto. Se guarda aparte (ver tunedrop/idioma.py).
+        self.language = QComboBox()
+        for codigo, nombre in idioma.IDIOMAS.items():
+            self.language.addItem(nombre, codigo)
+        self.language.setCurrentIndex(self.language.findData(idioma.actual()))
+
         form = QFormLayout()
         form.setSpacing(14)
-        form.addRow("Carpeta de música", folder_row)
-        form.addRow("Formato", self.format)
-        form.addRow("Descargas a la vez", self.concurrent)
+        form.addRow(tr("Carpeta de música"), folder_row)
+        form.addRow(tr("Formato"), self.format)
+        form.addRow(tr("Descargas a la vez"), self.concurrent)
         form.addRow("", self.normalize)
         form.addRow("", self.skip)
-        form.addRow("Álbum", self.album)
-        form.addRow("Letras", self.lyrics)
+        form.addRow(tr("Álbum"), self.album)
+        form.addRow(tr("Letras"), self.lyrics)
         form.addRow("", self.lrc)
-        form.addRow("Actualizaciones", self.updates)
+        form.addRow(tr("Actualizaciones"), self.updates)
+        form.addRow("Idioma · Language", self.language)
 
-        note = QLabel(
+        note = QLabel(tr(
             "Sobre la calidad: YouTube entrega el audio a ~128-160 kbps (Opus o AAC). "
             "MP3 V0 conserva todo lo que hay con un buen tamaño; 320 kbps no añade calidad real. "
             "M4A copia el audio AAC original sin recodificar y el iPod lo lee de forma nativa.\n\n"
             "El álbum y la portada salen de MusicBrainz (musicbrainz.org) y las letras de LRCLIB "
             "(lrclib.net), dos bases de datos gratuitas y abiertas. Si una canción no está, "
             "se descarga igual, con los datos del vídeo."
-        )
+        ))
         note.setObjectName("Muted")
         note.setWordWrap(True)
 
@@ -83,9 +92,9 @@ class SettingsDialog(QDialog):
         versions = QLabel(f"tunedrop {__version__} · yt-dlp {ytdlp_version}")
         versions.setObjectName("Muted")
 
-        cancel = QPushButton("Cancelar")
+        cancel = QPushButton(tr("Cancelar"))
         cancel.clicked.connect(self.reject)
-        save = QPushButton("Guardar")
+        save = QPushButton(tr("Guardar"))
         save.setObjectName("Primary")
         save.setDefault(True)
         save.clicked.connect(self.accept)
@@ -98,7 +107,7 @@ class SettingsDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 24, 24, 20)
         layout.setSpacing(18)
-        title = QLabel("Ajustes")
+        title = QLabel(tr("Ajustes"))
         title.setObjectName("PanelTitle")
         layout.addWidget(title)
         layout.addLayout(form)
@@ -111,9 +120,13 @@ class SettingsDialog(QDialog):
         self.setMinimumHeight(self.sizeHint().height())
 
     def _browse(self):
-        path = QFileDialog.getExistingDirectory(self, "Carpeta de música", self.folder.text())
+        path = QFileDialog.getExistingDirectory(self, tr("Carpeta de música"), self.folder.text())
         if path:
             self.folder.setText(path)
+
+    def chosen_language(self) -> str:
+        """El idioma elegido («es» o «en»)."""
+        return self.language.currentData()
 
     def result_settings(self) -> Settings:
         s = self._settings

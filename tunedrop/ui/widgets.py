@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 
 from ..core.downloader import Stage
 from ..core.models import Track
+from ..idioma import tr
 from . import icons, theme
 
 
@@ -106,7 +107,7 @@ class ResultCard(QWidget):
         self._meta_text = meta
         self.meta = QLabel(meta)
         self.meta.setObjectName("Muted")
-        self.badge = QLabel("Ya descargada")
+        self.badge = QLabel(tr("Ya descargada"))
         self.badge.setObjectName("Badge")
         self.badge.hide()
 
@@ -147,7 +148,7 @@ class ResultCard(QWidget):
     def set_added(self, added: bool) -> None:
         self.button.setProperty("added", added)
         self.button.setIcon(icons.icon("check" if added else "plus", 18, "#ffffff" if added else theme.TEXT, 2.4))
-        self.button.setToolTip("Quitar de la lista" if added else "Añadir a la lista")
+        self.button.setToolTip(tr("Quitar de la lista") if added else tr("Añadir a la lista"))
         self.button.style().unpolish(self.button)
         self.button.style().polish(self.button)
 
@@ -163,17 +164,17 @@ class ResultCard(QWidget):
         self.play.style().unpolish(self.play)
         self.play.style().polish(self.play)
         if state == "cargando":
-            self.play.setToolTip("Cargando… (pulsa para cancelar)")
+            self.play.setToolTip(tr("Cargando… (pulsa para cancelar)"))
             self._spin_timer.start()
             self._spin()
-            self.meta.setText(f"Cargando…  ·  {self._meta_text}")
+            self.meta.setText(tr("Cargando…") + f"  ·  {self._meta_text}")
         elif state == "sonando":
             self.play.setIcon(icons.icon("stop", 16, "#ffffff"))
-            self.play.setToolTip("Parar")
+            self.play.setToolTip(tr("Parar"))
             self.play_bar.show()
         else:
             self.play.setIcon(icons.icon("play", 16, "#ffffff"))
-            self.play.setToolTip("Escuchar")
+            self.play.setToolTip(tr("Escuchar"))
             self.play_bar.hide()
             self.play_bar.setValue(0)
             self.meta.setStyleSheet("")
@@ -253,7 +254,7 @@ class QueueCard(QWidget):
         self.remove.setObjectName("Icon")
         self.remove.setCursor(Qt.PointingHandCursor)
         self.remove.setIcon(icons.icon("x", 16, theme.MUTED))
-        self.remove.setToolTip("Quitar")
+        self.remove.setToolTip(tr("Quitar"))
         self.remove.clicked.connect(lambda: self.remove_requested.emit(self.key))
 
         layout = QHBoxLayout(self)
@@ -286,7 +287,7 @@ class QueueCard(QWidget):
             self.bar.setRange(0, 1000)
             self.bar.setValue(int(fraction * 1000))
             pct = f"{fraction * 100:.0f} %"
-            self.status.setText(f"{stage.value} · {pct}" + (f" · {extra}" if extra else ""))
+            self.status.setText(f"{tr(stage.value)} · {pct}" + (f" · {extra}" if extra else ""))
         else:
             # Etapas sin porcentaje: barra animada indeterminada.
             if stage in (Stage.QUEUED,):
@@ -294,7 +295,7 @@ class QueueCard(QWidget):
                 self.bar.setValue(0)
             else:
                 self.bar.setRange(0, 0)
-            self.status.setText(f"{stage.value}…")
+            self.status.setText(f"{tr(stage.value)}…")
         self.status.setStyleSheet("")
         self.action.hide()
 
@@ -306,12 +307,12 @@ class QueueCard(QWidget):
         self.bar.setProperty("state", "done")
         self._repolish(self.bar)
         self.bar.show()
-        label = self.stage.value + (f" · {quality}" if quality else "")
+        label = tr(self.stage.value) + (f" · {quality}" if quality else "")
         self.status.setText(label)
         self.status.setToolTip(label)   # si no cabe, al pasar el ratón se ve entero
         self.status.setStyleSheet(f"color: {theme.SUCCESS};")
         self.action.setIcon(icons.icon("folder", 16, theme.TEXT))
-        self.action.setToolTip("Mostrar en la carpeta")
+        self.action.setToolTip(tr("Mostrar en la carpeta"))
         self.action.show()
 
     def set_failed(self, message: str) -> None:
@@ -320,11 +321,11 @@ class QueueCard(QWidget):
         self.bar.setValue(1000)
         self.bar.setProperty("state", "failed")
         self._repolish(self.bar)
-        self.status.setText(f"Error: {message}")
+        self.status.setText(tr("Error: {motivo}", motivo=message))
         self.status.setToolTip(message)
         self.status.setStyleSheet(f"color: {theme.ERROR};")
         self.action.setIcon(icons.icon("retry", 16, theme.TEXT))
-        self.action.setToolTip("Reintentar")
+        self.action.setToolTip(tr("Reintentar"))
         self.action.show()
 
     def set_cancelled(self) -> None:

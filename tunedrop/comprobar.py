@@ -61,6 +61,19 @@ def ejecutar(args: list[str]) -> int:
             log(f"reproductor para escuchar: {'sí' if tiene_aac else 'NO'} (abre audio AAC)")
             ok &= tiene_aac
 
+        # Idioma (tunedrop/idioma.py) y las traducciones del propio Qt, que ponen
+        # en español los botones Sí/No. Si faltan, esos botones salen en inglés:
+        # se avisa, pero no es un fallo.
+        from PySide6.QtCore import QLibraryInfo, QTranslator
+
+        from . import idioma
+
+        guardado = idioma.idioma_guardado()
+        log(f"idioma: {idioma.actual()} ({'elegido' if guardado else 'el del sistema'})")
+        carpeta = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+        hay = QTranslator().load("qtbase_es", carpeta)
+        log(f"traducciones de Qt: {'sí' if hay else 'no (los botones Sí/No saldrán en inglés)'} ({carpeta})")
+
         if args:
             from .core.downloader import DownloadOptions, download_track
             from .core.models import AudioFormat

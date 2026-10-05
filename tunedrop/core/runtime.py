@@ -8,6 +8,8 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+from ..idioma import tr
+
 
 class MissingToolError(RuntimeError):
     pass
@@ -36,10 +38,12 @@ def ffmpeg_path() -> str:
     found = _find_in_bins("ffmpeg") or shutil.which("ffmpeg")
     if not found:
         if sys.platform == "win32":
-            ayuda = "Ejecuta `python packaging\\descargar_ffmpeg.py` (lo descarga solo) o instálalo con `winget install Gyan.FFmpeg`"
+            script, instalar = "python packaging\\descargar_ffmpeg.py", "winget install Gyan.FFmpeg"
         else:
-            ayuda = "Ejecuta `python3 packaging/descargar_ffmpeg.py` (lo descarga solo) o instálalo con `sudo apt install ffmpeg`"
-        raise MissingToolError(f"No se encontró ffmpeg. {ayuda} y vuelve a abrir tunedrop.")
+            script, instalar = "python3 packaging/descargar_ffmpeg.py", "sudo apt install ffmpeg"
+        raise MissingToolError(tr(
+            "No se encontró ffmpeg. Ejecuta `{script}` (lo descarga solo) o instálalo con "
+            "`{instalar}` y vuelve a abrir tunedrop.", script=script, instalar=instalar))
     return found
 
 
