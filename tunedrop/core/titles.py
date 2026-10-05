@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from ..idioma import tr
 
@@ -94,18 +95,51 @@ def clean_channel(channel: str) -> str:
     return channel.strip()
 
 
-def split_artist_title(title: str, channel: str = "") -> tuple[str, str]:
-    """Devuelve (artista, título) a partir del título del vídeo y el canal."""
+def _nombres(texto: str) -> set[str]:
+    """Los nombres de una lista de artistas, preparados para compararlos: sin
+    tildes, espacios ni signos, y en minúsculas.
+    «ANMI, La Pantera & Kabasaki» -> {"anmi", "lapantera", "kabasaki"}."""
+    partes = re.split(r",|&|\+|\s(?:x|y|and|feat\.?|ft\.?|with|con)\s", texto, flags=re.IGNORECASE)
+    nombres = set()
+    for parte in partes:
+        sin_tildes = unicodedata.normalize("NFKD", parte).encode("ascii", "ignore").decode()
+        nombre = re.sub(r"[^a-z0-9]", "", sin_tildes.lower())
+        if nombre:
+            nombres.add(nombre)
+    return nombres
+
+
+def _al_reves(izquierda: str, derecha: str, channel: str, creator: str) -> bool:
+    """True si «izquierda - derecha» es «Canción - Artista».
+
+    Lo normal es «Artista - Canción», pero algunos artistas suben sus vídeos al
+    revés: «PREÑÁ - Lucho RK», en el canal de Lucho RK. La pista son los
+    artistas que conocemos por otro lado: el canal y la lista de artistas que da
+    YouTube (creator). Solo se da la vuelta si alguno está a la derecha y
+    ninguno a la izquierda; si no hay pista clara (por ejemplo, en un canal de
+    letras como «BeatCloud»), se deja como está.
+    """
+    conocidos = _nombres(clean_channel(channel)) | _nombres(creator)
+    return bool(conocidos & _nombres(derecha)) and not conocidos & _nombres(izquierda)
+
+
+def split_artist_title(title: str, channel: str = "", creator: str = "") -> tuple[str, str]:
+    """Devuelve (artista, título) a partir del título del vídeo, el canal y los
+    artistas que da YouTube (creator, si los hay: «Peereira7, Agustin51»)."""
     cleaned = clean_title(title)
     for sep in _SEPARATORS:
         if sep in cleaned:
             artist, song = cleaned.split(sep, 1)
+            # «Canción | Nombre del álbum»: lo que va tras « | » suele ser el álbum.
+            song = clean_title(song.split(" | ")[0])
+            # Solo con guiones: tras « | » suele ir un programa o un álbum, no el
+            # artista («Canción | The Tonight Show», en el canal del programa).
+            if sep.strip() in "-–—" and _al_reves(artist, song, channel, creator):
+                artist, song = song, artist.strip()
             # «@coldplay» -> «coldplay»: la @ es de las menciones de YouTube.
             artist = artist.strip().lstrip("@")
-            # «Canción | Nombre del álbum»: lo que va tras « | » suele ser el álbum.
-            song = song.split(" | ")[0]
             if artist and song.strip():
-                return artist, clean_title(song)
+                return artist, song
     if citado := _CITADO.match(cleaned):
         return citado.group(1).strip(), citado.group(2).strip()
     return (clean_channel(channel) or tr("Desconocido")), cleaned

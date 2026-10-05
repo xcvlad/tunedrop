@@ -273,8 +273,11 @@ def build_tags(info: dict, track: Track) -> Tags:
         # También puede traer relleno, como «Canción (Remastered 2011)».
         title = clean_title(song) or song
     else:
+        # creator(s): los artistas que pone YouTube, si los hay. Sirven para
+        # saber si el título está al revés («Canción - Artista»).
+        creator = info.get("creator") or ", ".join(info.get("creators") or [])
         artist, title = split_artist_title(info.get("title") or track.title,
-                                           info.get("channel") or track.channel)
+                                           info.get("channel") or track.channel, creator)
     album_artist = info.get("album_artist") or (artists[0] if artists else artist)
     year = info.get("release_year") or info.get("release_date") or info.get("upload_date")
     # «BAD BUNNY» -> «Bad Bunny» (ver soften_caps). Si MusicBrainz encuentra la

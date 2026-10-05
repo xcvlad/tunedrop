@@ -203,11 +203,46 @@ def test_split_artist_title_real_example():
     ("@coldplay - Yellow (Lyrics)", ("coldplay", "Yellow")),
     ("Daft Punk - Get Lucky (Official Audio) ft. Pharrell Williams", ("Daft Punk", "Get Lucky ft. Pharrell Williams")),
     ("BTS (방탄소년단) 'Dynamite' Official MV", ("BTS (방탄소년단)", "Dynamite")),
-    ("Numb (Official Music Video) [4K UPGRADE] – Linkin Park", ("Numb", "Linkin Park")),  # al revés: no se puede saber
+    ("Numb (Official Music Video) [4K UPGRADE] – Linkin Park", ("Numb", "Linkin Park")),  # al revés, sin pistas: se deja
     ("Guns N' Roses Patience", ("Canal", "Guns N' Roses Patience")),
 ])
 def test_split_artist_title_youtube_cases(raw, expected):
     assert split_artist_title(raw, "Canal") == expected
+
+
+# Títulos al revés («Canción - Artista»): casos reales de YouTube, con su canal y
+# los artistas que da YouTube (creator).
+@pytest.mark.parametrize("raw, channel, creator, expected", [
+    ("Hola Soy Pro - Peereira7, Agustin51 (Video oficial)", "Peereira7", "Peereira7, Agustin51",
+     ("Peereira7, Agustin51", "Hola Soy Pro")),
+    ("PREÑÁ - Lucho RK (Video oficial)", "Lucho RK", "", ("Lucho RK", "PREÑÁ")),
+    ("NO ME GUILLO v2 - ANMI, La Pantera, Kabasaki (Video Oficial)", "ANMI", "ANMI, Kabasaki",
+     ("ANMI, La Pantera, Kabasaki", "NO ME GUILLO v2")),
+    ("Numb (Official Music Video) [4K UPGRADE] – Linkin Park", "Linkin Park", "", ("Linkin Park", "Numb")),
+    # Del derecho: el canal está a la izquierda, o en los dos lados, o en ninguno
+    ("Lucho RK - PREÑÁ (Letra)", "Mexi Music", "", ("Lucho RK", "PREÑÁ")),
+    ("Queen - Bohemian Rhapsody (Official Video)", "Queen Official", "", ("Queen", "Bohemian Rhapsody")),
+    ("Madonna - Like a Prayer", "Madonna", "", ("Madonna", "Like a Prayer")),
+    ("Bad Bunny - Bad Bunny", "Bad Bunny", "", ("Bad Bunny", "Bad Bunny")),
+    ("JUSEPH, LA PANTERA, LUCHO RK - CUPIDOxX (Video Oficial)", "Juseph", "",
+     ("JUSEPH, LA PANTERA, LUCHO RK", "CUPIDOxX")),
+    ("Shakira - Hips Don't Lie ft. Wyclef Jean", "shakiraVEVO", "", ("Shakira", "Hips Don't Lie ft. Wyclef Jean")),
+    # Con « | » no se da la vuelta: detrás suele ir un programa o un álbum
+    ("Peso Pluma: Ella Baila Sola | The Tonight Show Starring Jimmy Fallon",
+     "The Tonight Show Starring Jimmy Fallon", "",
+     ("Peso Pluma: Ella Baila Sola", "The Tonight Show Starring Jimmy Fallon")),
+])
+def test_split_artist_title_al_reves(raw, channel, creator, expected):
+    assert split_artist_title(raw, channel, creator) == expected
+
+
+def test_build_tags_title_al_reves():
+    info = {"title": "PREÑÁ - Lucho RK (Video oficial)", "channel": "Lucho RK"}
+    tags = build_tags(info, Track(id="1", url="u", title="t"))
+    assert (tags.artist, tags.title) == ("Lucho RK", "PREÑÁ")
+    info = {"title": "Hola Soy Pro - Peereira7, Agustin51", "channel": "Otro", "creators": ["Agustin51"]}
+    tags = build_tags(info, Track(id="1", url="u", title="t"))
+    assert (tags.artist, tags.title) == ("Peereira7, Agustin51", "Hola Soy Pro")
 
 
 def test_build_tags_from_video_title():
