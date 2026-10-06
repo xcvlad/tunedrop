@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -25,7 +26,23 @@ def cerrar_pantalla_del_lanzador() -> None:
             pass
 
 
+def sin_complementos_de_glib() -> None:
+    """Linux, programa compilado: que GLib no cargue los complementos del sistema.
+
+    El programa lleva dentro su propia GLib (una librería básica de Linux que usa
+    la parte de GTK de Qt), la de Ubuntu 22.04, donde se compila. Al arrancar,
+    GLib carga unos complementos del sistema (dconf, gvfs), y en sistemas más
+    nuevos (Ubuntu 24.04, Mint 22) están hechos para una GLib más moderna:
+    no se cargan y llenan la terminal de avisos «undefined symbol». tunedrop no
+    los necesita, así que se le indica una carpeta de complementos que no existe.
+    """
+    if getattr(sys, "frozen", False) and sys.platform.startswith("linux"):
+        os.environ["GIO_MODULE_DIR"] = os.path.join(sys._MEIPASS, "sin-complementos-de-gio")
+        os.environ.pop("GIO_EXTRA_MODULES", None)
+
+
 def main() -> int:
+    sin_complementos_de_glib()
     if "--comprobar" in sys.argv:
         cerrar_pantalla_del_lanzador()
         from .comprobar import ejecutar

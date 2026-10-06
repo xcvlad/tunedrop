@@ -1,4 +1,5 @@
 import io
+import os
 import shutil
 import subprocess
 import sys
@@ -527,6 +528,26 @@ def test_latest_version_offline(monkeypatch):
 
 def test_install_kind_from_source():
     assert updates.install_kind() == "manual"   # los tests se ejecutan desde el código
+
+
+def test_sin_complementos_de_glib(monkeypatch, tmp_path):
+    from tunedrop import __main__ as principal
+
+    # setenv y luego delenv: así pytest la deja como estaba al terminar el test.
+    monkeypatch.setenv("GIO_MODULE_DIR", "x")
+    monkeypatch.delenv("GIO_MODULE_DIR")
+    monkeypatch.setenv("GIO_EXTRA_MODULES", "/usr/lib/gio/modules")
+    principal.sin_complementos_de_glib()          # desde el código: no toca nada
+    assert "GIO_MODULE_DIR" not in os.environ
+    # Programa compilado en Linux: GLib no cargará los complementos del sistema...
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path), raising=False)
+    monkeypatch.setattr(sys, "platform", "linux")
+    principal.sin_complementos_de_glib()
+    assert os.environ["GIO_MODULE_DIR"].startswith(str(tmp_path))
+    assert "GIO_EXTRA_MODULES" not in os.environ
+    # ...pero los programas que abre tunedrop sí.
+    assert "GIO_MODULE_DIR" not in updates.clean_environment()
 
 
 def test_strip_timestamps():
