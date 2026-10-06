@@ -86,9 +86,13 @@ def clean_environment() -> dict:
     entorno, y cualquier programa que abra las hereda. Si ese programa acaba
     abriendo otra tunedrop (el comando de instalar lo hace al terminar), se
     confundiría con ellas. Esta variable le dice que empiece de cero.
+
+    Tampoco se pasa GIO_MODULE_DIR (ver __main__.sin_complementos_de_glib): es
+    solo para tunedrop, y a los programas del sistema les quitaría sus complementos.
     """
     env = dict(os.environ)
     env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+    env.pop("GIO_MODULE_DIR", None)
     return env
 
 
