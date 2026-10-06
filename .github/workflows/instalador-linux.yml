@@ -31,12 +31,14 @@ jobs:
           - nombre: Linux Mint 22.1
             imagen: linuxmintd/mint22.1-amd64
             preparar: apt-get update && apt-get install -y curl ca-certificates
+            escritorio: true
           - nombre: Linux Mint 21.3
             imagen: linuxmintd/mint21.3-amd64
             preparar: apt-get update && apt-get install -y curl ca-certificates
           - nombre: Ubuntu 24.04
             imagen: ubuntu:24.04
             preparar: apt-get update && apt-get install -y curl ca-certificates
+            escritorio: true
           - nombre: Debian 12
             imagen: debian:12
             preparar: apt-get update && apt-get install -y curl ca-certificates
@@ -129,3 +131,20 @@ jobs:
           cat salida3.txt
           grep -q "Done!" salida3.txt
           test "$(cat "$HOME/.config/tunedrop/idioma.txt")" = en
+
+      # En Ubuntu 24.04 y Mint 22, la GLib que lleva el programa (la de Ubuntu
+      # 22.04) no puede cargar los complementos de GIO del sistema (dconf, gvfs),
+      # y antes de la v0.7.2 salían avisos «undefined symbol» en la terminal.
+      # Aquí se instalan esos complementos y GTK, como en un escritorio de verdad,
+      # y se abre la ventana: no debe salir ningún aviso así.
+      - name: 8. Escritorio de verdad - sin avisos «undefined symbol» de GLib
+        if: ${{ matrix.escritorio }}
+        run: |
+          DEBIAN_FRONTEND=noninteractive apt-get install -y xvfb xauth dbus dbus-x11 \
+            dconf-gsettings-backend gvfs libgtk-3-0t64
+          XDG_CURRENT_DESKTOP=GNOME dbus-run-session -- timeout 15 \
+            xvfb-run -a "$HOME/.local/share/tunedrop/tunedrop" > avisos.txt 2>&1 || true
+          cat avisos.txt
+          if grep -E "undefined symbol|Failed to load module" avisos.txt; then
+            echo "Han salido avisos de librerías al abrir tunedrop"; exit 1
+          fi
